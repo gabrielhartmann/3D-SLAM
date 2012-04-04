@@ -45,6 +45,7 @@ void drawCamera(Eigen::Vector3d position, double r, double g, double b);
 void drawAxes();
 void drawLandmarks();
 void drawLandmark(double x, double y, double sideLength, double r, double g, double b);
+void step();
 
 namespace
 {
@@ -54,6 +55,8 @@ namespace
     SimScene simScene;
     SimCamera simCamera(simScene);
     ukf filter(simCamera);
+    bool play = false;
+    bool neverDisplayed = true;
 }
 
 void drawEllipse(float xradius, float yradius)
@@ -72,20 +75,28 @@ void drawEllipse(float xradius, float yradius)
 
 void renderFunction()
 {
-    float grey = 241.0;
-    glClearColor(grey/255.0, grey/255.0, grey/255.0, 0.0);
-    glClear(GL_COLOR_BUFFER_BIT);
-    glLoadIdentity();
-    glOrtho(-20.0, areaWidth+25.0, -20.0, areaHeight+25.0, -1.0, 1.0);
     
-    drawAxes();
-    drawCamera(simCamera.position(), 1.0, 0.0, 0.0);
-    drawCamera(filter.position(), 0.0, 0.0, 1.0);
-    printf("\n");
-    drawLandmarks();
+        
+        float grey = 241.0;
+        glClearColor(grey/255.0, grey/255.0, grey/255.0, 0.0);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glLoadIdentity();
+        glOrtho(-20.0, areaWidth+25.0, -20.0, areaHeight+25.0, -1.0, 1.0);
 
-    glutSwapBuffers();
-    glFlush();
+        drawAxes();
+        if(play)
+        {
+            step();
+        }
+        drawCamera(simCamera.position(), 1.0, 0.0, 0.0);
+        drawCamera(filter.position(), 0.0, 0.0, 1.0);
+        printf("\n");
+        drawLandmarks();
+
+        glFlush();
+        glutSwapBuffers();
+        neverDisplayed = false;
+    
 }
 
 void drawLandmarks()
@@ -169,6 +180,12 @@ void drawLandmark(double x, double y, double sideLength, double r, double g, dou
     glPopMatrix();
 }
 
+void step()
+{
+    simCamera.timeStep();
+    filter.step(simCamera.defaultTimeStep, simCamera.measure(simScene));
+}
+
 void keyboardListener(unsigned char key, int x, int y)
 {
     switch (key)
@@ -177,8 +194,7 @@ void keyboardListener(unsigned char key, int x, int y)
             exit(0);
             break;
         case 32: // Space
-            simCamera.timeStep();
-            filter.step(simCamera.defaultTimeStep, simCamera.measure(simScene));
+            play = !play;
             break;
         case 82: //R
         case 114://r
@@ -195,9 +211,9 @@ int main(int argc, char** argv)
     glutInitDisplayMode(GLUT_SINGLE);
     glutInitWindowSize(1000,500);
     glutInitWindowPosition(100,100);
-    glutCreateWindow("OpenGL - First window demo");
+    glutCreateWindow("UKF SLAM");
     glutDisplayFunc(renderFunction);
-    // glutIdleFunc(renderFunction);
+    glutIdleFunc(renderFunction);
     glutKeyboardFunc(keyboardListener);
     glutMainLoop();    
     return 0;
