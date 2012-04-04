@@ -19,11 +19,14 @@ ukf::ukf(SimCamera simCamera)
 void ukf::initialize()
 {
     filterStepCount = 0;
-    augmentedstateSize = stateSize2D + numLandmarks * landmarkSize2D + stateNoiseSize2D;
-    unaugmentedStateSize = augmentedstateSize - stateNoiseSize2D;
+    augmentedstateSize = stateSize2D + numLandmarks * landmarkSize2D + processNoiseSize + numLandmarks * measurementNoiseSize;
+    unaugmentedStateSize = augmentedstateSize - processNoiseSize - numLandmarks * measurementNoiseSize;
+    totalNoiseSize = numLandmarks * measurementNoiseSize + processNoiseSize;
     
     initializeStateVector2D();
     initializeStateCovariance2D();
+    initializeProcessCovariance();
+    initializeMeasurementCovariance();
     
     //Initialize sigma point scaling factor
     alpha = 0.001;
@@ -39,15 +42,15 @@ void ukf::step(double timeStep, Eigen::VectorXd measurement)
     printf("======================================================================\n");
     timeUpdate(timeStep);
     measurementUpdate(measurement);
-    printStateVector(stateVector);
-    printf("======================================================================\n");
-    printf("                                %d                                    \n", filterStepCount);
-    printf("======================================================================\n");
+    //printStateVector(stateVector);
+    //printf("======================================================================\n");
+    //printf("                                %d                                    \n", filterStepCount);
+    //printf("======================================================================\n");
 }
 
 Eigen::Vector3d ukf::position()
 {
-    Eigen::Vector3d pos(-1.0, stateVector(0,0), 0.0);
+    Eigen::Vector3d pos(stateVector(0,0), stateVector(1,0), 0.0);
     printf("Filtered Camera Position: (%f, %f)\n", pos(0,0), pos(1,0));
     return pos;
 }
@@ -79,12 +82,14 @@ void ukf::reset(SimCamera simCamera)
 
 void ukf::initializeStateVector2D()
 {
-    stateVector.resize(augmentedstateSize);
+    //stateVector.resize(augmentedstateSize);
+    stateVector.resize(unaugmentedStateSize);
     initializeVector2Zero(stateVector);
     
-    stateVector(0,0) = simCamera.camPosition(1,0);
-    stateVector(1,0) = simCamera.camVelocity(1,0);
-    //stateVector(2,0) = simCamera.camAcceleration(1,0);
+    stateVector(0,0) = simCamera.camPosition(0,0);
+    stateVector(1,0) = simCamera.camPosition(1,0);
+    stateVector(2,0) = simCamera.camVelocity(0,0);
+    stateVector(3,0) = simCamera.camVelocity(1,0);
     
     int mapOffset = stateSize2D;
     for (int i=0, j=0; i<numLandmarks; i++, j+=landmarkSize2D)
@@ -114,7 +119,15 @@ void ukf::initializeStateCovariance2D()
         {
             if(i == j)
             {
-                stateCovariance(i,j) = 0.1;
+                if (i==0 || i==1 || i==2 || i==3) //Initial Camera position and velocity perfectly known
+                {
+                    stateCovariance(i,j) = 0.0;
+                }
+                else
+                {
+                    stateCovariance(i,j) = 0.01;
+                }
+                
             }
             else
             {
@@ -123,34 +136,54 @@ void ukf::initializeStateCovariance2D()
         }
     }
     
+    //Set landmark variances
+    for (int i=0; i<numLandmarks; i++)
+    {
+        int index = getLandmarkIndex2D(i);
+        //Origin
+        stateCovariance(index, index) = 0.0;
+        stateCovariance(index + 1, index + 1) = 0.0;
+        //Direction
+        stateCovariance(index + 2, index + 2) = 0.0;
+        stateCovariance(index + 3, index + 3) = 0.0;
+        //Inverse Depth
+        stateCovariance(index+4, index+4) = inverseDepthVariance;
+    }
+}
+
+void ukf::initializeMeasurementCovariance()
+{
+    measurementCovariance.resize(numLandmarks, numLandmarks);
+    initializeMatrix2Zero(measurementCovariance);
+    
+    for (int row=0; row<measurementCovariance.rows(); row++)
+    {
+        measurementCovariance(row, row) = 0.1; //Square matrix so can do diagonal this way
+    }
+}
+
+void ukf::initializeProcessCovariance()
+{
+    processCovariance.resize(unaugmentedStateSize, unaugmentedStateSize);
+    initializeMatrix2Zero(processCovariance);
+    processCovariance(0,0) = 0.001; //Horizontal position
+    processCovariance(1,0) = 0.001; //Vertical position
+    processCovariance(2,0) = 0.001; //Horizontal velocity
+    processCovariance(3,0) = 0.001; //Vertical velocity
     
     //Set landmark variances
     for (int i=0; i<numLandmarks; i++)
     {
         int index = getLandmarkIndex2D(i);
-        
         //Origin
-        //stateCovariance(index, index) = 0.0;
-        //stateCovariance(index + 1, index + 1) = 0.0;
+        processCovariance(index, index) = 0.00;
+        processCovariance(index + 1, index + 1) = 0.00;
         //Direction
-        //stateCovariance(index + 2, index + 2) = 0.0;
-        //stateCovariance(index + 3, index + 3) = 0.0;
+        processCovariance(index + 2, index + 2) = 0.00;
+        processCovariance(index + 3, index + 3) = 0.00;
         //Inverse Depth
-        stateCovariance(index+4, index+4) = inverseDepthVariance;
+        processCovariance(index+4, index+4) = inverseDepthVariance;
     }
-    
-    
-    //Set acceleration variance
-    //stateCovariance(stateSize2D-1, stateSize2D-1) = accelerationVariance;
-    
-    //Set acceleration noise variance
-    //stateCovariance(stateVector.rows()-2, stateVector.rows()-2) = accelerationVariance;
-    
-    //Set measurement noise variance
-    //stateCovariance(stateVector.rows()-1, stateVector.rows()-1) = measurementVariance;
-    
-    //printf("State Covariance Matrix Initialized %d x %d:\n", stateCovariance.rows(), stateCovariance.cols());
-    //std::cout << stateCovariance << std::endl;
 }
 
 int ukf::getLandmarkIndex2D(int i)
@@ -197,12 +230,12 @@ double ukf::covarianceWeight(int index)
     return meanWeight(index);
 }
 
-void ukf::generateSigmaPoints()
+void ukf::generateSigmaPoints(Eigen::VectorXd stVector, Eigen::MatrixXd covMatrix)
 {
     sigmaPoints.clear();
     
     // Scale and square root augmented state covariance
-    Eigen::MatrixXd scaledStateCovariance = (lambda + N) * stateCovariance;
+    Eigen::MatrixXd scaledStateCovariance = (lambda + N) * covMatrix;
     //printf("The scaled state covariance:\n");
     //std::cout << scaledStateCovariance << std::endl << std::endl;
     
@@ -214,22 +247,17 @@ void ukf::generateSigmaPoints()
     
     //printf("Check that L * L^T = original\n");
     //std::cout << S * S.transpose() << std::endl << std::endl;
-            
     
-    Eigen::VectorXd tmpStateVector = stateVector;
-    //std::cout << "The augmented State Vector" << std::endl;
-    //std::cout << augmentedStateVector << std::endl;
-    
-    sigmaPoints.push_back(tmpStateVector); // Add the mean
+    sigmaPoints.push_back(stVector); // Add the mean
     
     for (int i=0; i<N; i++) // Add the spread points
     {
         Eigen::VectorXd column = getColumn(S, i);
         
-        Eigen::VectorXd sigmaPoint = tmpStateVector + column; // +
+        Eigen::VectorXd sigmaPoint = stVector + column; // +
         sigmaPoints.push_back(sigmaPoint);
         
-        sigmaPoint = tmpStateVector - column; // -
+        sigmaPoint = stVector - column; // -
         sigmaPoints.push_back(sigmaPoint);
     }
     
@@ -238,41 +266,63 @@ void ukf::generateSigmaPoints()
 
 void ukf::cleanCovariance()
 {
-    //Reset cross covariance of noise in state covariance     
-    int row = stateCovariance.rows()-1;
-    for (int i=0; i<stateNoiseSize2D; i++)
+    
+   for (int row = unaugmentedStateSize; row<augmentedstateSize; row++)
+   {
+       for (int col = 0; col<augmentedstateSize; col++)
+       {
+           stateCovariance(row,col) = 0.0;
+       }
+   }
+   
+   for (int row = 0; row<augmentedstateSize; row++)
+   {
+       for (int col=unaugmentedStateSize; col<augmentedstateSize; col++)
+       {
+           stateCovariance(row,col) = 0.0;
+       }
+   }
+   
+    /*
+    for (int row = 0; row<augmentedstateSize; row++)
     {
-        row -= i;
-        for (int j=0; j<stateCovariance.cols()-2; j++)
+        for (int col = 0; col<augmentedstateSize; col++)
         {
-            stateCovariance(row, j) = 0.0;
-            //Also do the column
-            stateCovariance(j, row) = 0.0;
+            if (row != col)
+            {
+                stateCovariance(row, col) = 0.0;
+            }
         }
     }
-    stateCovariance(stateCovariance.rows()-1, stateCovariance.rows()-2) = 0.0;
-    stateCovariance(stateCovariance.rows()-2, stateCovariance.rows()-1) = 0.0;
-    
-    
+     */
 }
 
 void ukf::augmentStateVector()
 {
-    stateVector.conservativeResize(stateSize2D + numLandmarks * landmarkSize2D + stateNoiseSize2D);
-    //Reset noise to 0 in State
-    stateVector(stateVector.rows()-1, 0) = 0.0;
-    stateVector(stateVector.rows()-2, 0) = 0.0;
+    stateVector.conservativeResize(augmentedstateSize);
+    //Reset all noise to 0 in State
+    for (int i=unaugmentedStateSize; i<augmentedstateSize; i++)
+    {
+        stateVector(i) = 0.0;
+    }
+    
+    //printf("Augmented State Vector:\n");
+    //std::cout << stateVector << std::endl << std::endl;
 }
 
 void ukf::augmentStateCovariance()
 {
     stateCovariance.conservativeResize(augmentedstateSize, augmentedstateSize);
-    stateCovariance(augmentedstateSize-2, augmentedstateSize-2) = 0.00001; //State noise variance
-    stateCovariance(augmentedstateSize-1, augmentedstateSize-1) = 0.0000000000000001;; //Measurement noise variance
-    
     cleanCovariance();
-//    printf("Cleaned State Covariance:\n");
-//    std::cout << stateCovariance << std::endl << std::endl;
+        
+    stateCovariance(unaugmentedStateSize, unaugmentedStateSize) = 0.00001; //State noise variance
+    for (int i=unaugmentedStateSize+1; i<augmentedstateSize; i++)
+    {
+        stateCovariance(i, i) = 0.0000000000000001;; //Measurement noise variance
+    }
+    
+    //printf("Augmented and Cleaned State Covariance:\n");
+    //std::cout << stateCovariance << std::endl << std::endl;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -280,31 +330,33 @@ void ukf::augmentStateCovariance()
 /////////////////////////////////////////////////////////////////////////////////////////////
 void ukf::timeUpdate(double deltaT)
 {
-    augmentStateVector();
-    augmentStateCovariance();
+    //augmentStateVector();
+    //augmentStateCovariance();
     
-    generateSigmaPoints();
+    generateSigmaPoints(stateVector, stateCovariance);
     for (int i=0; i<sigmaPoints.size(); i++)
     {
+        //Remove measurement noise from sigmaPoint;
+        //sigmaPoints.at(i).conservativeResize(unaugmentedStateSize+processNoiseSize);
         processFunction2D(sigmaPoints.at(i), deltaT);
         //printf("------Processed Sigma Point %d ------\n", i);
         //printStateVector(sigmaPoints.at(i));
     }
     
     //Compute a priori Mean
-    aPrioriStateMean.resize(unaugmentedStateSize); //Remove noise positions from the bottom of the state vector
+    aPrioriStateMean.resize(unaugmentedStateSize);
     initializeVector2Zero(aPrioriStateMean);
     for (int i=0; i<sigmaPoints.size(); i++)
     {
         //Remove noise values from sigmaPoint
-        sigmaPoints.at(i).conservativeResize(unaugmentedStateSize);
+        //sigmaPoints.at(i).conservativeResize(unaugmentedStateSize);
         aPrioriStateMean = aPrioriStateMean + (meanWeight(i) * sigmaPoints.at(i));
     }
     //std::cout << "The a priori state mean estimate:" << std::endl;
     //std::cout << aPrioriStateMean << std::endl << std::endl;
     
     //Compute a priori Covariance
-    aPrioriStateCovariance.resize(stateVector.rows() - stateNoiseSize2D, stateVector.rows() - stateNoiseSize2D);
+    aPrioriStateCovariance.resize(stateVector.rows(), stateVector.rows());
     initializeMatrix2Zero(aPrioriStateCovariance);    
     for (int i=0; i<sigmaPoints.size(); i++)
     {
@@ -322,27 +374,36 @@ void ukf::timeUpdate(double deltaT)
         //printStateVector(tmpState);
         aPrioriStateCovariance = aPrioriStateCovariance + covarianceWeight(i) * ( tmpState * tmpState.transpose() );
     }
+    
+    aPrioriStateCovariance = aPrioriStateCovariance + processCovariance;
     //std::cout << "The a priori state covariance:" << std::endl;
     //std::cout << aPrioriStateCovariance << std::endl;
+    
+    generateSigmaPoints(aPrioriStateMean, aPrioriStateCovariance);
+    
+    predictMeasurements();
 }
 
 void ukf::processFunction2D(Eigen::VectorXd& sigmaPoint, double deltaT)
 {
-    double position = sigmaPoint(0,0);
-    double velocity = sigmaPoint(1,0);
-    double acceleration = sigmaPoint(2,0); //Acceleration only in Y direction
+    Eigen::Vector2d position;
+    position(0,0) = sigmaPoint(0,0);
+    position(1,0) = sigmaPoint(1,0);
     
+    Eigen::Vector2d velocity;
+    velocity(0,0) = sigmaPoint(2,0);
+    velocity(1,0) = sigmaPoint(3,0);
     
-    position = position + (velocity * deltaT) + sigmaPoint(sigmaPoint.rows()-2, 0);
-    //position = position + velocity * deltaT;
-    //velocity = velocity + (acceleration + sigmaPoint(sigmaPoint.rows()-2, 0)) * deltaT ; // Add noise
+//    Eigen::Vector2d processNoise;
+//    processNoise(0,0) = sigmaPoint(unaugmentedStateSize);
+//    processNoise(1,0) = sigmaPoint(unaugmentedStateSize+1);
     
-    //position = position + sigmaPoint(sigmaPoint.rows()-2, 0);
-     
+    position = position + (velocity * deltaT);
         
-    sigmaPoint(0,0) = position;
-    sigmaPoint(1,0) = velocity;
-    sigmaPoint(2,0) = acceleration;
+    sigmaPoint(0,0) = position(0,0);
+    sigmaPoint(1,0) = position(1,0);
+    sigmaPoint(2,0) = velocity(0,0);
+    sigmaPoint(3,0) = velocity(1,0);
 }
 
 void ukf::predictMeasurements()
@@ -383,8 +444,8 @@ bool ukf::measureLandmarks2D(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measur
     measurement.resize(numLandmarks);
     
     Eigen::Vector2d camPosition;
-    camPosition(0,0) = -1.0;
-    camPosition(1,0) = sigmaPoint(0,0);
+    camPosition(0,0) = sigmaPoint(0,0);
+    camPosition(1,0) = sigmaPoint(1,0);
     
     Eigen::Vector2d origin;
     Eigen::Vector2d direction;
@@ -409,10 +470,11 @@ bool ukf::measureLandmarks2D(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measur
         }
         //printf("Euclidean Landmark\n");
         //std::cout << euclideanLandmark << std::endl;
+        
+        //With focal length of 1, the measurment is just the slope
         double slope = (euclideanLandmark(1,0) - camPosition(1,0)) /
                        (euclideanLandmark(0,0) - camPosition(0,0));
-        double yIntercept = camPosition(1,0) - (slope * camPosition(0,0));
-        measurement(i,0) = yIntercept - camPosition(1,0) + sigmaPoint(sigmaPoint.rows()-1, 0); //Add measurement noise
+        measurement(i,0) = slope;
     }
     
     return true;
@@ -423,8 +485,6 @@ bool ukf::measureLandmarks2D(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measur
 /////////////////////////////////////////////////////////////////////////////////////////////
 void ukf::measurementUpdate(Eigen::VectorXd measurement)
 {
-    predictMeasurements();
-    
     Eigen::VectorXd tmpState(stateVector.rows(), 1);
     Eigen::VectorXd tmpMeasurement(stateVector.rows(), 1);
     
@@ -451,6 +511,9 @@ void ukf::measurementUpdate(Eigen::VectorXd measurement)
         tmpMeasurement = predictedMeasurements.at(i) - aPrioriMeasurementsMean;
         Pzz = Pzz + covarianceWeight(i) * (tmpMeasurement * tmpMeasurement.transpose());
     }
+    
+    Pzz = Pzz + measurementCovariance;
+    
 //    std::cout << "Pzz" << std::endl;
 //    std::cout << Pzz << std::endl << std::endl;
 //    
@@ -499,8 +562,8 @@ void ukf::measurementUpdate(Eigen::VectorXd measurement)
 
 void ukf::printStateVector(Eigen::VectorXd vector)
 {
-    printf("Camera Position:     (%f)\n", vector(0,0));
-    printf("Camera Velocity:     (%f)\n", vector(1,0));
+    printf("Camera Position:     (%f, %f)\n", vector(0,0), vector(1,0));
+    printf("Camera Velocity:     (%f, %f)\n", vector(2,0), vector(3,0));
     //printf("Camera Acceleration: (%f)\n", vector(2,0));
     
     

@@ -40,13 +40,15 @@ private:
     SimCamera simCamera;
     
     int numLandmarks;
-    const static int stateSize2D = 2;
+    const static int stateSize2D = 4;
     const static int landmarkSize2D = 5;
-    const static int stateNoiseSize2D = 2;
+    const static int processNoiseSize = 2;
+    const static int measurementNoiseSize = 1;
+    int totalNoiseSize;
     int unaugmentedStateSize;
     int augmentedstateSize;
     
-    const static double inverseDepthVariance = 0.00000000000625;
+    const static double inverseDepthVariance = 0.0625;
     const static double accelerationVariance = 0.0625;
     const static double measurementVariance = 0.025;
    
@@ -55,6 +57,12 @@ private:
        
     Eigen::MatrixXd stateCovariance;
     void initializeStateCovariance2D();
+    
+    Eigen::MatrixXd measurementCovariance;
+    void initializeMeasurementCovariance();
+    
+    Eigen::MatrixXd processCovariance;
+    void initializeProcessCovariance();
     
     int getLandmarkIndex2D(int i);
     
@@ -67,7 +75,7 @@ private:
     double meanWeight(int index);
     double covarianceWeight(int index);
     
-    void generateSigmaPoints();
+    void generateSigmaPoints(Eigen::VectorXd stVector, Eigen::MatrixXd covMatrix);
     std::vector<Eigen::VectorXd, Eigen::aligned_allocator<Eigen::VectorXd> > sigmaPoints;    
     void processFunction2D(Eigen::VectorXd& sigmaPoint, double deltaT);    
     Eigen::VectorXd getColumn(Eigen::MatrixXd M, int colIndex);

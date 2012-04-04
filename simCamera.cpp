@@ -12,9 +12,9 @@ SimCamera::SimCamera(SimScene simScene)
     camPositionNoiseMean(1,0) = 0.0;
     camPositionNoiseMean(2,0) = 0.0;
     
-    camPositionNoiseVariance(0,0) = 0.00001;
-    camPositionNoiseVariance(1,0) = 0.00001;
-    camPositionNoiseVariance(2,0) = 0.00001;
+    camPositionNoiseVariance(0,0) = 0.001;
+    camPositionNoiseVariance(1,0) = 0.001;
+    camPositionNoiseVariance(2,0) = 0.001;
     
     camAccelerationNoiseMean(0,0) = 0.0;
     camAccelerationNoiseMean(1,0) = 0.0;
@@ -28,9 +28,9 @@ SimCamera::SimCamera(SimScene simScene)
     camMeasurementNoiseMean(1,0) = 0.0;
     camMeasurementNoiseMean(2,0) = 0.0;
     
-    camMeasurementNoiseVariance(0,0) = 0.0000000000000001;
-    camMeasurementNoiseVariance(1,0) = 0.0000000000000001;
-    camMeasurementNoiseVariance(2,0) = 0.0000000000000001;
+    camMeasurementNoiseVariance(0,0) = 0.1;
+    camMeasurementNoiseVariance(1,0) = 0.1;
+    camMeasurementNoiseVariance(2,0) = 0.1;
     
     camDirection(0,0) = 1.0;
     camDirection(1,0) = 0.0;
@@ -57,7 +57,7 @@ void SimCamera::initializeMap(SimScene simScene)
         origin(2,0) = 0.0;
         Landmark landmark(origin, 
                           simScene.landmarks.at(i) - origin, 
-                          (1.0/simScene.landmarks.at(i)(0,0)) * 1.2);
+                          (1.0/simScene.landmarks.at(i)(0,0)) * 0.6);
         map.push_back(landmark);
     }
 }
@@ -88,7 +88,7 @@ void SimCamera::reset()
     camInitialVelocity(2,0) = 0.0;
     
     camInitialPosition(0,0) = -1.0;
-    camInitialPosition(1,0) = 100.0;
+    camInitialPosition(1,0) = 80.0;
     camInitialPosition(2,0) = 0.0;
     
     camPosition = camInitialPosition;
