@@ -29,6 +29,10 @@ public:
     std::vector<Eigen::Vector2d, Eigen::aligned_allocator<Eigen::Vector2d> > landmarks();
     void reset(SimCamera simCamera);
 private:
+    int filterStepCount;
+    void cleanCovariance();
+    void augmentStateVector();
+    void augmentStateCovariance();
     void timeUpdate(double deltaT);
     void predictMeasurements();
     void measurementUpdate(Eigen::VectorXd measurement);
@@ -36,11 +40,13 @@ private:
     SimCamera simCamera;
     
     int numLandmarks;
-    const static int stateSize2D = 3;
+    const static int stateSize2D = 2;
     const static int landmarkSize2D = 5;
     const static int stateNoiseSize2D = 2;
+    int unaugmentedStateSize;
+    int augmentedstateSize;
     
-    const static double inverseDepthVariance = 0.0625;
+    const static double inverseDepthVariance = 0.00000000000625;
     const static double accelerationVariance = 0.0625;
     const static double measurementVariance = 0.025;
    

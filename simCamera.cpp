@@ -12,9 +12,9 @@ SimCamera::SimCamera(SimScene simScene)
     camPositionNoiseMean(1,0) = 0.0;
     camPositionNoiseMean(2,0) = 0.0;
     
-    camPositionNoiseVariance(0,0) = 1.0;
-    camPositionNoiseVariance(1,0) = 1.0;
-    camPositionNoiseVariance(2,0) = 1.0;
+    camPositionNoiseVariance(0,0) = 0.00001;
+    camPositionNoiseVariance(1,0) = 0.00001;
+    camPositionNoiseVariance(2,0) = 0.00001;
     
     camAccelerationNoiseMean(0,0) = 0.0;
     camAccelerationNoiseMean(1,0) = 0.0;
@@ -39,9 +39,9 @@ SimCamera::SimCamera(SimScene simScene)
     //GOOD SET
 //    defaultInverseDepth = 0.005;
 //    defaultTimeStep = 0.01;
-    
-    defaultInverseDepth = 0.005;
-    defaultTimeStep = 0.01;
+    double depth = 120.0;
+    defaultInverseDepth = 1.0/depth;
+    defaultTimeStep = 0.1;
     
     reset();
     initializeMap(simScene);
@@ -51,9 +51,13 @@ void SimCamera::initializeMap(SimScene simScene)
 {
     for (int i=0; i<simScene.landmarks.size(); i++)
     {
-        Landmark landmark(camPosition, 
-                          simScene.landmarks.at(i) - camPosition, 
-                          defaultInverseDepth);        
+        Eigen::Vector3d origin;
+        origin(0,0) = -1.0;
+        origin(1,0) = simScene.landmarks.at(i)(1,0);
+        origin(2,0) = 0.0;
+        Landmark landmark(origin, 
+                          simScene.landmarks.at(i) - origin, 
+                          (1.0/simScene.landmarks.at(i)(0,0)) * 1.2);
         map.push_back(landmark);
     }
 }
@@ -80,7 +84,7 @@ void SimCamera::reset()
     currTime = 0.0;
     
     camInitialVelocity(0,0) = 0.0;
-    camInitialVelocity(1,0) = 0.0;
+    camInitialVelocity(1,0) = -1.0;
     camInitialVelocity(2,0) = 0.0;
     
     camInitialPosition(0,0) = -1.0;
@@ -99,37 +103,25 @@ void SimCamera::reset()
 void SimCamera::timeStep()
 {
     currTime += defaultTimeStep;
+    camPosition = camPosition + defaultTimeStep * camVelocity ;       
+    addNoise2Position();
+
+    //addNoise2Acceleration();
+
+    //camVelocity = (camAcceleration * currTime) + camInitialVelocity;
     
-    camVelocity = (camAcceleration * currTime) + camInitialVelocity;
-    
-    camPosition = 
-            (0.5 * camAcceleration * (currTime * currTime)) +
-            (camInitialVelocity * currTime) +
-            camInitialPosition;
-    
-    //std::cout << "Noiseless camera position:" << std::endl;
-    //std::cout << camPosition << std::endl;
-    
-    //std::cout << "acceleration before noise:" << std::endl;
-    //std::cout << camAcceleration << std::endl;
-    addNoise2Acceleration();
-    //std::cout << "acceleration after noise:" << std::endl;
-    //std::cout << camAcceleration << std::endl;
-    
-    camVelocity = (camAcceleration * currTime) + camInitialVelocity;
-    
-    camPosition = 
-            (0.5 * camAcceleration * (currTime * currTime)) +
-            (camInitialVelocity * currTime) +
-            camInitialPosition;
+    //camPosition = 
+    //        (0.5 * camAcceleration * (currTime * currTime)) +
+    //        (camInitialVelocity * currTime) +
+    //        camInitialPosition;
     
     //std::cout << "Noisy camera position:" << std::endl;
     //std::cout << camPosition << std::endl;
     
     //Reset acceleration
-    camAcceleration(0,0) = 0.0;
-    camAcceleration(1,0) = -9.81;
-    camAcceleration(2,0) = 0.0;
+    //camAcceleration(0,0) = 0.0;
+    //camAcceleration(1,0) = -9.81;
+    //camAcceleration(2,0) = 0.0;
     
 }
 
