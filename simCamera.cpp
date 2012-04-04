@@ -39,9 +39,9 @@ SimCamera::SimCamera(SimScene simScene)
     //GOOD SET
 //    defaultInverseDepth = 0.005;
 //    defaultTimeStep = 0.01;
-    double depth = 120.0;
+    double depth = 110.0;
     defaultInverseDepth = 1.0/depth;
-    defaultTimeStep = 0.1;
+    defaultTimeStep = 0.33;
     
     reset();
     initializeMap(simScene);
@@ -55,6 +55,7 @@ void SimCamera::initializeMap(SimScene simScene)
         origin(0,0) = -1.0;
         origin(1,0) = simScene.landmarks.at(i)(1,0);
         origin(2,0) = 0.0;
+//        origin = camPosition;
         Landmark landmark(origin, 
                           simScene.landmarks.at(i) - origin, 
                           (1.0/simScene.landmarks.at(i)(0,0)) * 0.6);
@@ -88,7 +89,7 @@ void SimCamera::reset()
     camInitialVelocity(2,0) = 0.0;
     
     camInitialPosition(0,0) = -1.0;
-    camInitialPosition(1,0) = 80.0;
+    camInitialPosition(1,0) = 120.0;
     camInitialPosition(2,0) = 0.0;
     
     camPosition = camInitialPosition;
