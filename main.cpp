@@ -48,11 +48,26 @@ void drawLandmark(double x, double y, double sideLength, double r, double g, dou
 
 namespace
 {
+    const float DEG2RAD = 3.14159/180;
     double areaWidth = 200;
     double areaHeight = 100;
     SimScene simScene;
     SimCamera simCamera(simScene);
     ukf filter(simCamera);
+}
+
+void drawEllipse(float xradius, float yradius)
+{
+   glBegin(GL_LINE_LOOP);
+ 
+   for (int i=0; i<360; i++)
+   {
+      //convert degrees into radians
+      float degInRad = i*DEG2RAD;
+      glVertex2f(cos(degInRad)*xradius,sin(degInRad)*yradius);
+   }
+ 
+   glEnd();
 }
 
 void renderFunction()
