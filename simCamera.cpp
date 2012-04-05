@@ -89,7 +89,7 @@ void SimCamera::reset()
     camInitialVelocity(2,0) = 0.0;
     
     camInitialPosition(0,0) = -1.0;
-    camInitialPosition(1,0) = 120.0;
+    camInitialPosition(1,0) = 100.0;
     camInitialPosition(2,0) = 0.0;
     
     camPosition = camInitialPosition;
