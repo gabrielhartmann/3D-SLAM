@@ -28,17 +28,14 @@ SimCamera::SimCamera(SimScene simScene)
     camMeasurementNoiseMean(1,0) = 0.0;
     camMeasurementNoiseMean(2,0) = 0.0;
     
-    camMeasurementNoiseVariance(0,0) = 0.1;
-    camMeasurementNoiseVariance(1,0) = 0.1;
-    camMeasurementNoiseVariance(2,0) = 0.1;
+    camMeasurementNoiseVariance(0,0) = 0.00001;
+    camMeasurementNoiseVariance(1,0) = 0.00001;
+    camMeasurementNoiseVariance(2,0) = 0.00001;
     
     camDirection(0,0) = 1.0;
     camDirection(1,0) = 0.0;
     camDirection(2,0) = 0.0;
     
-    //GOOD SET
-//    defaultInverseDepth = 0.005;
-//    defaultTimeStep = 0.01;
     double depth = 110.0;
     defaultInverseDepth = 1.0/depth;
     defaultTimeStep = 0.33;
@@ -52,13 +49,11 @@ void SimCamera::initializeMap(SimScene simScene)
     for (int i=0; i<simScene.landmarks.size(); i++)
     {
         Eigen::Vector3d origin;
-        origin(0,0) = -1.0;
-        origin(1,0) = simScene.landmarks.at(i)(1,0);
-        origin(2,0) = 0.0;
-//        origin = camPosition;
+        origin = camPosition;
+        
         Landmark landmark(origin, 
                           simScene.landmarks.at(i) - origin, 
-                          (1.0/simScene.landmarks.at(i)(0,0)) * 0.6);
+                          defaultInverseDepth);
         map.push_back(landmark);
     }
 }

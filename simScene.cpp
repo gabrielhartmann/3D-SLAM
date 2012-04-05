@@ -19,6 +19,7 @@ SimScene::SimScene()
     landmarks.push_back(Eigen::Vector3d (100.0, 30.0, 0.0));
     landmarks.push_back(Eigen::Vector3d (100.0, 20.0, 0.0));
     
+    landmarks.push_back(Eigen::Vector3d (100.0, 10.0, 0.0));
     landmarks.push_back(Eigen::Vector3d (90.0, 10.0, 0.0));
     landmarks.push_back(Eigen::Vector3d (80.0, 10.0, 0.0));
     landmarks.push_back(Eigen::Vector3d (70.0, 10.0, 0.0));

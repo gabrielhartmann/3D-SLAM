@@ -92,7 +92,6 @@ private:
     void printSigmaPoints();
     void initializeMatrix2Zero(Eigen::MatrixXd& matrix);
     void initializeVector2Zero(Eigen::VectorXd& vector);
-    Eigen::MatrixXd getSquareRoot(Eigen::MatrixXd matrix);
     
     Eigen::Vector2d getEuclideanLandmark(int index);
 };
