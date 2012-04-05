@@ -195,6 +195,7 @@ void keyboardListener(unsigned char key, int x, int y)
             break;
         case 32: // Space
             play = !play;
+            //step();
             break;
         case 82: //R
         case 114://r

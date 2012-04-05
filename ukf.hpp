@@ -40,13 +40,9 @@ private:
     SimCamera simCamera;
     
     int numLandmarks;
-    const static int stateSize2D = 4;
+    const static int cameraStateSize = 4;
     const static int landmarkSize2D = 5;
-    const static int processNoiseSize = 2;
-    const static int measurementNoiseSize = 1;
-    int totalNoiseSize;
-    int unaugmentedStateSize;
-    int augmentedstateSize;
+    int stateSize;
     
     const static double inverseDepthVariance = 0.0625;
     const static double accelerationVariance = 0.0625;
