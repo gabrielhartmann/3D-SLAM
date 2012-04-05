@@ -40,7 +40,7 @@ private:
     SimCamera simCamera;
     
     int numLandmarks;
-    const static int cameraStateSize = 4;
+    const static int cameraStateSize = 6;
     const static int landmarkSize2D = 5;
     int stateSize;
     

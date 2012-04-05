@@ -16,13 +16,21 @@ SimCamera::SimCamera(SimScene simScene)
     camPositionNoiseVariance(1,0) = 0.001;
     camPositionNoiseVariance(2,0) = 0.001;
     
+    camVelocityNoiseMean(0,0) = 0.0;
+    camVelocityNoiseMean(1,0) = 0.0;
+    camVelocityNoiseMean(2,0) = 0.0;
+    
+    camVelocityNoiseVariance(0,0) = 0.001;
+    camVelocityNoiseVariance(1,0) = 0.001;
+    camVelocityNoiseVariance(2,0) = 0.001;
+    
     camAccelerationNoiseMean(0,0) = 0.0;
     camAccelerationNoiseMean(1,0) = 0.0;
     camAccelerationNoiseMean(2,0) = 0.0;
     
-    camAccelerationNoiseVariance(0,0) = 0.0000000000000001;
-    camAccelerationNoiseVariance(1,0) = 0.0000000000000001;
-    camAccelerationNoiseVariance(2,0) = 0.0000000000000001;
+    camAccelerationNoiseVariance(0,0) = 0.001;
+    camAccelerationNoiseVariance(1,0) = 0.001;
+    camAccelerationNoiseVariance(2,0) = 0.001;
     
     camMeasurementNoiseMean(0,0) = 0.0;
     camMeasurementNoiseMean(1,0) = 0.0;
@@ -99,25 +107,25 @@ void SimCamera::reset()
 void SimCamera::timeStep()
 {
     currTime += defaultTimeStep;
-    camPosition = camPosition + defaultTimeStep * camVelocity ;       
-    addNoise2Position();
+    //camPosition = camPosition + defaultTimeStep * camVelocity ;       
+    //addNoise2Position();
 
-    //addNoise2Acceleration();
+    addNoise2Acceleration();
 
-    //camVelocity = (camAcceleration * currTime) + camInitialVelocity;
+    camVelocity = (camAcceleration * currTime) + camInitialVelocity;
     
-    //camPosition = 
-    //        (0.5 * camAcceleration * (currTime * currTime)) +
-    //        (camInitialVelocity * currTime) +
-    //        camInitialPosition;
+    camPosition = 
+            (0.5 * camAcceleration * (currTime * currTime)) +
+            (camInitialVelocity * currTime) +
+            camInitialPosition;
     
     //std::cout << "Noisy camera position:" << std::endl;
     //std::cout << camPosition << std::endl;
     
     //Reset acceleration
-    //camAcceleration(0,0) = 0.0;
-    //camAcceleration(1,0) = -9.81;
-    //camAcceleration(2,0) = 0.0;
+    camAcceleration(0,0) = 0.0;
+    camAcceleration(1,0) = -9.81;
+    camAcceleration(2,0) = 0.0;
     
 }
 
