@@ -82,6 +82,8 @@ void ukf::initializeStateVector2D()
     stateVector(1,0) = simCamera.camPosition(1,0);
     stateVector(2,0) = simCamera.camVelocity(0,0);
     stateVector(3,0) = simCamera.camVelocity(1,0);
+    stateVector(4,0) = simCamera.camAcceleration(0,0);
+    stateVector(5,0) = simCamera.camAcceleration(1,0);
     
     int mapOffset = cameraStateSize;
     for (int i=0, j=0; i<numLandmarks; i++, j+=landmarkSize2D)
@@ -111,7 +113,7 @@ void ukf::initializeStateCovariance2D()
         {
             if(i == j)
             {
-                if (i==0 || i==1 || i==2 || i==3) //Initial Camera position and velocity perfectly known
+                if (i==0 || i==1 || i==2 || i==3 || i==4 || i==5) //Initial Camera position, velocity and acceleration perfectly known
                 {
                     stateCovariance(i,j) = 0.0;
                 }
@@ -180,10 +182,12 @@ void ukf::initializeProcessCovariance()
     */
     
     processCovariance.resize(cameraStateSize + numLandmarks, cameraStateSize + numLandmarks); //landmarks only vary by inverse depth so only one entry per landmark
-    processCovariance(0,0) = 0.001; //Horizontal position
-    processCovariance(1,1) = 0.001; //Vertical position 
-    processCovariance(2,2) = 0.001; //Horizontal velocity
-    processCovariance(3,3) = 0.001; //Vertical velocity
+    processCovariance(0,0) = simCamera.camPositionNoiseVariance(0,0);     //Horizontal position
+    processCovariance(1,1) = simCamera.camPositionNoiseVariance(1,0);     //Vertical position 
+    processCovariance(2,2) = simCamera.camVelocityNoiseVariance(0,0);     //Horizontal velocity
+    processCovariance(3,3) = simCamera.camVelocityNoiseVariance(1,0);     //Vertical velocity
+    processCovariance(4,4) = simCamera.camAccelerationNoiseVariance(0,0); //Horizontal acceleration
+    processCovariance(5,5) = simCamera.camAccelerationNoiseVariance(1,0); //Vertical acceleration
     
     for (int i=cameraStateSize; i<processCovariance.rows(); i++)
     {
@@ -395,12 +399,33 @@ void ukf::processFunction2D(Eigen::VectorXd& sigmaPoint, double deltaT)
     velocity(0,0) = sigmaPoint(2,0);
     velocity(1,0) = sigmaPoint(3,0);
     
-    Eigen::Vector2d processNoise;
-    processNoise(0,0) = sigmaPoint(stateSize);
-    processNoise(1,0) = sigmaPoint(stateSize+1);
+    Eigen::Vector2d acceleration;
+    acceleration(0,0) = sigmaPoint(4,0);
+    acceleration(1,0) = sigmaPoint(5,0);
     
-    position = position + (velocity * deltaT) + processNoise;
+    Eigen::Vector2d positionNoise;
+    positionNoise(0,0) = sigmaPoint(stateSize);
+    positionNoise(1,0) = sigmaPoint(stateSize+1);
     
+    Eigen::Vector2d velocityNoise;
+    velocityNoise(0,0) = sigmaPoint(stateSize+2);
+    velocityNoise(1,0) = sigmaPoint(stateSize+3);
+    
+    Eigen::Vector2d accelerationNoise;
+    accelerationNoise(0,0) = sigmaPoint(stateSize+4);
+    accelerationNoise(1,0) = sigmaPoint(stateSize+5);
+    
+    //position = position + (velocity * deltaT) + processNoise;
+    acceleration = acceleration + accelerationNoise;
+    velocity = velocity + velocityNoise;
+    position = position + positionNoise;
+    
+    position = position + 
+            (0.5 * acceleration * (deltaT * deltaT)) +
+            (velocity * deltaT);
+    
+    velocity = velocity + acceleration * deltaT;
+     
     
     for (int i=0; i<numLandmarks; i++)
     {
@@ -415,6 +440,8 @@ void ukf::processFunction2D(Eigen::VectorXd& sigmaPoint, double deltaT)
     sigmaPoint(1,0) = position(1,0);
     sigmaPoint(2,0) = velocity(0,0);
     sigmaPoint(3,0) = velocity(1,0);
+    sigmaPoint(4,0) = acceleration(0,0);
+    sigmaPoint(5,0) = acceleration(1,0);
     
     //printf("Processed Sigma Point\n");
     //std::cout << sigmaPoint << std::endl << std::endl;

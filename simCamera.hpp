@@ -40,6 +40,9 @@ public:
     Eigen::Vector3d camPositionNoiseMean;
     Eigen::Vector3d camPositionNoiseVariance;
     
+    Eigen::Vector3d camVelocityNoiseMean;
+    Eigen::Vector3d camVelocityNoiseVariance;
+    
     Eigen::Vector3d camAccelerationNoiseMean;
     Eigen::Vector3d camAccelerationNoiseVariance;
     
