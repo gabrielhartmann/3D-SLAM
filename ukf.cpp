@@ -150,7 +150,7 @@ void ukf::initializeMeasurementCovariance()
     
     for (int row=0; row<measurementCovariance.rows(); row++)
     {
-        measurementCovariance(row, row) = 0.1; //Square matrix so can do diagonal this way
+        measurementCovariance(row, row) = simCamera.camMeasurementNoiseVariance(1,0); //Square matrix so can do diagonal this way
     }
 }
 
@@ -436,8 +436,8 @@ void ukf::predictMeasurements()
         else
         {
             printf("*******************************************\n");
-            printf("              HUGE PROBLEM                 \n");
-            printf("         Landmark behind CAMERA            \n");
+            printf("*             HUGE PROBLEM                *\n");
+            printf("*        Landmark behind CAMERA           *\n");
             printf("*******************************************\n");
         }
         //printf("--- Predicted Measurement %d ------\n", i);
@@ -631,52 +631,6 @@ void ukf::initializeVector2Zero(Eigen::VectorXd& vector)
     {
         vector(i,0) = 0.0;
     }
-}
-
-Eigen::MatrixXd ukf::getSquareRoot(Eigen::MatrixXd matrix)
-{
-   using namespace std;
-   using namespace Eigen;
-//   Matrix2f A, b;
-//   A << 2, -1, -1, 3;
-//   b << 1, 2, 3, 1;
-//   cout << "Here is the matrix A:\n" << A << endl;
-//   cout << "Here is the right hand side b:\n" << b << endl;
-//   Matrix2f x = A.ldlt().solve(b);
-//   cout << "The solution is:\n" << x << endl;
-   //cout << matrix.ldlt().matrixL() << endl;
-   //return matrix.ldlt().matrixL();
-   
-    //typedef Matrix<double, 5, 3> Matrix5x3;
-    //typedef Matrix<double, 5, 5> Matrix5x5;
-    //Matrix5x3 m = Matrix5x3::Random();
-    cout << "Here is the matrix:" << endl << matrix << endl;
-    LLT<MatrixXd> lu(matrix);
-    MatrixXd L = lu.matrixL();
-    
-    cout << "The Cholesky factor L is" << endl << L << endl;
-    cout << "To check this, let us compute L * L.transpose()" << endl;
-    cout << L * L.transpose() << endl;
-    cout << "This should equal the matrix" << endl;
-    /*
-    Eigen::FullPivLU<MatrixXd> lu(matrix);
-    cout << "Here is, up to permutations, its LU decomposition matrix:"
-        << endl << lu.matrixLU() << endl;
-    
-    cout << "Here is the L part:" << endl;
-    //Matrix5x5 l = Matrix5x5::Identity();
-    int rows = matrix.rows();
-    int cols = matrix.cols();
-    MatrixXd l = MatrixXd::Identity(10, 10);
-    l.block<10, 10>(0,0).triangularView<StrictlyLower>() = lu.matrixLU();
-    cout << l << endl;
-    
-    cout << "Here is the U part:" << endl;
-    MatrixXd u = lu.matrixLU().triangularView<Upper>();
-    cout << u << endl;
-    cout << "Let us now reconstruct the original matrix m:" << endl;
-    cout << lu.permutationP().inverse() * l * u * lu.permutationQ().inverse() << endl;
-    */
 }
 
 Eigen::Vector2d ukf::getEuclideanLandmark(int index)
