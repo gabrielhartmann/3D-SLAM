@@ -33,13 +33,13 @@ int main (int argc, const char * argv[])
 } 
  */
 
-//#include "ukf.hpp"
-#include "GL/freeglut.h"
+#include <stdio.h>
 #include "GL/gl.h"
+#include "GL/freeglut.h"
 #include "simCamera.hpp"
 #include "simScene.hpp"
 #include "ukf.hpp"
-#include <stdio.h>
+
 
 void drawCamera(Eigen::Vector3d position, double r, double g, double b);
 void drawAxes();

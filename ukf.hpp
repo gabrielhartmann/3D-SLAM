@@ -25,6 +25,7 @@ public:
     ukf(SimCamera simCamera);
     void initialize();
     void step(double timeStep, Eigen::VectorXd measurement);
+    void step(double timeStep, Eigen::VectorXd control, Eigen::VectorXd measurement);
     Eigen::Vector3d position();
     std::vector<Eigen::Vector2d, Eigen::aligned_allocator<Eigen::Vector2d> > landmarks();
     void reset(SimCamera simCamera);
@@ -33,7 +34,8 @@ private:
     void cleanCovariance();
     void augmentStateVector();
     void augmentStateCovariance();
-    void timeUpdate(double deltaT);
+    void processUpdate(double deltaT);
+    void processUpdate(double deltaT, Eigen::VectorXd control);
     void predictMeasurements();
     void measurementUpdate(Eigen::VectorXd measurement);
     
