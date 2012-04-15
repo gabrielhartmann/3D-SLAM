@@ -38,12 +38,17 @@ void ukf::step(double timeStep, Eigen::VectorXd measurement)
     printf("======================================================================\n");
     printf("                                %d                                    \n", ++filterStepCount);
     printf("======================================================================\n");
-    timeUpdate(timeStep);
+    processUpdate(timeStep);
     measurementUpdate(measurement);
     //printStateVector(stateVector);
     //printf("======================================================================\n");
     //printf("                                %d                                    \n", filterStepCount);
     //printf("======================================================================\n");
+}
+
+void ukf::step(double timeStep, Eigen::VectorXd control, Eigen::VectorXd measurement)
+{
+    
 }
 
 Eigen::Vector3d ukf::position()
@@ -322,9 +327,9 @@ void ukf::augmentStateCovariance()
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-//                           TIME UPDATE
+//                           PROCESS UPDATE
 /////////////////////////////////////////////////////////////////////////////////////////////
-void ukf::timeUpdate(double deltaT)
+void ukf::processUpdate(double deltaT)
 {
     augmentStateVector();
     augmentStateCovariance();
@@ -387,6 +392,14 @@ void ukf::timeUpdate(double deltaT)
     predictMeasurements();
     //printf("A Priori Measurement Mean:\n");
     //std::cout << aPrioriMeasurementsMean << std::endl << std::endl;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+//                           PROCESS UPDATE WITH CONTROL
+/////////////////////////////////////////////////////////////////////////////////////////////
+void ukf::processUpdate(double deltaT, Eigen::VectorXd control)
+{
+    
 }
 
 void ukf::processFunction2D(Eigen::VectorXd& sigmaPoint, double deltaT)
