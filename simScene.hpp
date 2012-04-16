@@ -8,14 +8,23 @@
 #ifndef SIMSCENE_HPP
 #define	SIMSCENE_HPP
 
-#include "Eigen/Dense"
 #include <vector>
+#include <GL/glut.h>
+#include "Eigen/Dense"
+#include "Color.hpp"
+
 
 class SimScene
 {
 public:
     SimScene();
     std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> > landmarks;
+    void draw();
+private:
+    static const double cubeWidth = 2.0;
+    static const int axesLength = 100;
+    void drawAxes();
+    void drawLandmarks();
 };
 
 

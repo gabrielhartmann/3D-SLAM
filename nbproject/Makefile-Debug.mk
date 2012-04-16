@@ -36,10 +36,15 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 OBJECTFILES= \
 	${OBJECTDIR}/ukf.o \
 	${OBJECTDIR}/main.o \
+	${OBJECTDIR}/Utilities.o \
 	${OBJECTDIR}/io.o \
+	${OBJECTDIR}/Color.o \
 	${OBJECTDIR}/simCamera.o \
+	${OBJECTDIR}/Trackball.o \
 	${OBJECTDIR}/grid_features.o \
 	${OBJECTDIR}/normalRandom.o \
+	${OBJECTDIR}/Lighting.o \
+	${OBJECTDIR}/Geometry.o \
 	${OBJECTDIR}/simScene.o \
 	${OBJECTDIR}/landmark.o
 
@@ -78,15 +83,30 @@ ${OBJECTDIR}/main.o: main.cpp
 	${RM} $@.d
 	$(COMPILE.cc) -g -I/usr/include/eigen3 -MMD -MP -MF $@.d -o ${OBJECTDIR}/main.o main.cpp
 
+${OBJECTDIR}/Utilities.o: Utilities.cpp 
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} $@.d
+	$(COMPILE.cc) -g -I/usr/include/eigen3 -MMD -MP -MF $@.d -o ${OBJECTDIR}/Utilities.o Utilities.cpp
+
 ${OBJECTDIR}/io.o: io.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} $@.d
 	$(COMPILE.cc) -g -I/usr/include/eigen3 -MMD -MP -MF $@.d -o ${OBJECTDIR}/io.o io.cpp
 
+${OBJECTDIR}/Color.o: Color.cpp 
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} $@.d
+	$(COMPILE.cc) -g -I/usr/include/eigen3 -MMD -MP -MF $@.d -o ${OBJECTDIR}/Color.o Color.cpp
+
 ${OBJECTDIR}/simCamera.o: simCamera.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} $@.d
 	$(COMPILE.cc) -g -I/usr/include/eigen3 -MMD -MP -MF $@.d -o ${OBJECTDIR}/simCamera.o simCamera.cpp
+
+${OBJECTDIR}/Trackball.o: Trackball.cpp 
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} $@.d
+	$(COMPILE.cc) -g -I/usr/include/eigen3 -MMD -MP -MF $@.d -o ${OBJECTDIR}/Trackball.o Trackball.cpp
 
 ${OBJECTDIR}/grid_features.o: grid_features.cpp 
 	${MKDIR} -p ${OBJECTDIR}
@@ -97,6 +117,16 @@ ${OBJECTDIR}/normalRandom.o: normalRandom.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} $@.d
 	$(COMPILE.cc) -g -I/usr/include/eigen3 -MMD -MP -MF $@.d -o ${OBJECTDIR}/normalRandom.o normalRandom.cpp
+
+${OBJECTDIR}/Lighting.o: Lighting.cpp 
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} $@.d
+	$(COMPILE.cc) -g -I/usr/include/eigen3 -MMD -MP -MF $@.d -o ${OBJECTDIR}/Lighting.o Lighting.cpp
+
+${OBJECTDIR}/Geometry.o: Geometry.cpp 
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} $@.d
+	$(COMPILE.cc) -g -I/usr/include/eigen3 -MMD -MP -MF $@.d -o ${OBJECTDIR}/Geometry.o Geometry.cpp
 
 ${OBJECTDIR}/simScene.o: simScene.cpp 
 	${MKDIR} -p ${OBJECTDIR}

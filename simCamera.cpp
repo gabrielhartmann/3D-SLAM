@@ -1,8 +1,6 @@
+
 #include "simCamera.hpp"
-#include "normalRandom.hpp"
-#include <stdio.h>
-#include <math.h>
-#include <iostream>
+
 
 SimCamera::SimCamera(){}
 
@@ -199,6 +197,41 @@ void SimCamera::addNoise2Measurement(Eigen::Vector3d& imagePoint)
 
 Eigen::Vector3d SimCamera::position()
 {
-    printf("Simulated Camera Position: (%f, %f)\n", camPosition(0,0), camPosition(1,0));
+    //printf("Simulated Camera Position: (%f, %f)\n", camPosition(0,0), camPosition(1,0));
     return camPosition;
+}
+
+void SimCamera::draw()
+{
+     glPushMatrix();
+    
+    glTranslated(camPosition[0], camPosition[1], camPosition[2]);
+    Eigen::AngleAxisd aa(90.0, Eigen::Vector3d::UnitY());
+    glRotated(aa.angle(), aa.axis().x(), aa.axis().y(), aa.axis().z());
+    
+    glBegin(GL_TRIANGLE_FAN);
+    
+    Color::setColor(0.8, 0.8, 0.8); //white
+    //glColor3d(0.8, 0.8, 0.8);
+    //glNormal3d(0.0, 0.0, 1.0);
+    glVertex3d(0.0, 0.0, 0.0);
+    
+    Color::setColor(0.8, 0.0, 0.0); //red
+    //glNormal3d(-3.0, 3.0, 0.0);
+    glVertex3d(-3.0, 3.0, defaultFocalLength);
+    
+    //glNormal3d(3.0, 3.0, 0.0);
+    glVertex3d(3.0, 3.0, defaultFocalLength);
+    
+     //glNormal3d(3.0, -3.0, 0.0);
+    glVertex3d(3.0, -3.0, defaultFocalLength);
+      
+    //glNormal3d(-3.0, -3.0, 0.0);
+    glVertex3d(-3.0, -3.0, defaultFocalLength);
+            
+    //glNormal3d(3.0, 3.0, 0.0);
+    glVertex3d(-3.0, 3.0, defaultFocalLength);
+    glEnd();
+    
+    glPopMatrix();
 }

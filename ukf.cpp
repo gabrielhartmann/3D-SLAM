@@ -54,8 +54,57 @@ void ukf::step(double timeStep, Eigen::VectorXd control, Eigen::VectorXd measure
 Eigen::Vector3d ukf::position()
 {
     Eigen::Vector3d pos(stateVector(0,0), stateVector(1,0), 0.0);
-    printf("Filtered Camera Position: (%f, %f)\n", pos(0,0), pos(1,0));
+    //printf("Filtered Camera Position: (%f, %f)\n", pos(0,0), pos(1,0));
     return pos;
+}
+
+void ukf::draw()
+{
+    drawCamera();
+    
+    Color::setColor(0.0, 0.0, 8.0);
+    for (int i=0; i < landmarks().size(); i++)
+    {
+        glPushMatrix();
+        glTranslated(landmarks()[i].x(), landmarks()[i].y(), 0.0);
+        glutSolidCube(2.0);
+        glPopMatrix();
+    }
+}
+
+void ukf::drawCamera()
+{
+    glPushMatrix();
+    
+    glTranslated(position()[0], position()[1], position()[2]);
+    Eigen::AngleAxisd aa(90.0, Eigen::Vector3d::UnitY());
+    glRotated(aa.angle(), aa.axis().x(), aa.axis().y(), aa.axis().z());
+    
+    glBegin(GL_TRIANGLE_FAN);
+    
+    Color::setColor(0.8, 0.8, 0.8); //white
+    //glColor3d(0.8, 0.8, 0.8);
+    //glNormal3d(0.0, 0.0, 1.0);
+    glVertex3d(0.0, 0.0, 0.0);
+    
+    Color::setColor(0.0, 0.0, 8.0); //blue
+    //glNormal3d(-3.0, 3.0, 0.0);
+    glVertex3d(-3.0, 3.0, simCamera.defaultFocalLength);
+    
+    //glNormal3d(3.0, 3.0, 0.0);
+    glVertex3d(3.0, 3.0, simCamera.defaultFocalLength);
+    
+     //glNormal3d(3.0, -3.0, 0.0);
+    glVertex3d(3.0, -3.0, simCamera.defaultFocalLength);
+      
+    //glNormal3d(-3.0, -3.0, 0.0);
+    glVertex3d(-3.0, -3.0, simCamera.defaultFocalLength);
+            
+    //glNormal3d(3.0, 3.0, 0.0);
+    glVertex3d(-3.0, 3.0, simCamera.defaultFocalLength);
+    glEnd();
+    
+    glPopMatrix();
 }
 
 std::vector<Eigen::Vector2d, Eigen::aligned_allocator<Eigen::Vector2d> > ukf::landmarks()

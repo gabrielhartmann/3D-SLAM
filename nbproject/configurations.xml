@@ -4,6 +4,11 @@
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
+      <itemPath>Color.hpp</itemPath>
+      <itemPath>Geometry.h</itemPath>
+      <itemPath>Lighting.h</itemPath>
+      <itemPath>Trackball.h</itemPath>
+      <itemPath>Utilities.h</itemPath>
       <itemPath>grid_features.hpp</itemPath>
       <itemPath>io.hpp</itemPath>
       <itemPath>landmark.hpp</itemPath>
@@ -536,6 +541,11 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
+      <itemPath>Color.cpp</itemPath>
+      <itemPath>Geometry.cpp</itemPath>
+      <itemPath>Lighting.cpp</itemPath>
+      <itemPath>Trackball.cpp</itemPath>
+      <itemPath>Utilities.cpp</itemPath>
       <itemPath>grid_features.cpp</itemPath>
       <itemPath>io.cpp</itemPath>
       <itemPath>landmark.cpp</itemPath>

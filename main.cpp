@@ -1,221 +1,172 @@
-/* 
- * File:   main.cpp
- * Author: gabe
- *
- * Created on 26 March 2012, 4:16 PM
- */
-/*
-#include <stdio.h>
-#include "io.hpp"
-#include "grid_features.hpp"
-#include "ukf.hpp"
-
-int main (int argc, const char * argv[])
-{
-    ukf* filter = new ukf();
-    
-    std::vector<std::string> test;
-    
-    ImageReader* imgReader = new ImageReader("/home/gabe/sequences/grid sequence/frames/");
-    std::string imgWindowName = "Frame";
-
-    GridFeatures* featureFinder = new GridFeatures(8,6);
-
-    for (int i=0; i<imgReader->numImages; i++)
-    {
-            cv::Mat img = imgReader->getNextImage();
-            std::vector<cv::Point2f> corners = featureFinder->getFeatures(img);
-
-            cv::imshow(imgWindowName, img);
-            cv::waitKey(0);
-    }
-
-} 
- */
+// A program to display a surface of revolution
+//
+// Use 'l' to render the mesh
+// Use 's' to render the surface
+// Use 'e' to enable backface culling
+// Use 'd' to disable backface culling
 
 #include <stdio.h>
-#include "GL/gl.h"
-#include "GL/freeglut.h"
-#include "simCamera.hpp"
+#include <GL/gl.h>
+#include <GL/glu.h>
+#include <GL/glut.h>
+#include "Trackball.h"
+#include "Lighting.h"
+#include "Geometry.h"
+#include "Color.hpp"
 #include "simScene.hpp"
+#include "simCamera.hpp"
 #include "ukf.hpp"
 
 
-void drawCamera(Eigen::Vector3d position, double r, double g, double b);
-void drawAxes();
-void drawLandmarks();
-void drawLandmark(double x, double y, double sideLength, double r, double g, double b);
-void step();
+const int windowWidth=800;
+const int windowHeight=800;
 
-namespace
-{
-    const float DEG2RAD = 3.14159/180;
-    double areaWidth = 200;
-    double areaHeight = 100;
-    SimScene simScene;
-    SimCamera simCamera(simScene);
-    ukf filter(simCamera);
-    bool play = false;
-    bool neverDisplayed = true;
+typedef enum {LINE_MODE, SURFACE_MODE} RENDER_OPTION;
+RENDER_OPTION current_render_option=SURFACE_MODE;
+
+double eyeZ = 600.0;
+
+CTrackball trackball;
+CLighting lighting;
+
+Color color;
+
+SimScene simScene;
+SimCamera simCamera(simScene);
+ukf filter(simCamera);
+
+double defaultTimeStep = 0.05;
+
+void handleWheel(double zoom);
+
+void handleMouseMotion(int x, int y)
+{	
+	trackball.tbMotion(x, y);
 }
 
-void drawEllipse(float xradius, float yradius)
-{
-   glBegin(GL_LINE_LOOP);
- 
-   for (int i=0; i<360; i++)
-   {
-      //convert degrees into radians
-      float degInRad = i*DEG2RAD;
-      glVertex2f(cos(degInRad)*xradius,sin(degInRad)*yradius);
-   }
- 
-   glEnd();
-}
-
-void renderFunction()
+void handleMouseClick(int button, int state, int x, int y)
 {
     
-        
-        float grey = 241.0;
-        glClearColor(grey/255.0, grey/255.0, grey/255.0, 0.0);
-        glClear(GL_COLOR_BUFFER_BIT);
-        glLoadIdentity();
-        glOrtho(-20.0, areaWidth+25.0, -20.0, areaHeight+25.0, -1.0, 1.0);
-
-        drawAxes();
-        if(play)
-        {
-            step();
-        }
-        drawCamera(simCamera.position(), 1.0, 0.0, 0.0);
-        drawCamera(filter.position(), 0.0, 0.0, 1.0);
-        printf("\n");
-        drawLandmarks();
-
-        glFlush();
-        glutSwapBuffers();
-        neverDisplayed = false;
     
-}
-
-void drawLandmarks()
-{
-    for (int i=0; i<simScene.landmarks.size(); i++)
+    if (button == 3) // Wheel up
     {
-        Eigen::Vector3d landmark = simScene.landmarks.at(i);
-        drawLandmark(landmark(0,0), landmark(1,0), 2.0, 0.0, 1.0, 0.0);
+        handleWheel(-2.0);
     }
-    
-    std::vector<Eigen::Vector2d, Eigen::aligned_allocator<Eigen::Vector2d> > lms = filter.landmarks();
-    for (int i=0; i<lms.size(); i++)
+    if (button == 4) // Wheel down
     {
-        drawLandmark(lms.at(i)(0,0), lms.at(i)(1,0), 2.0, 0.0, 0.0, 1.0);
+        handleWheel(2.0);
     }
-}
 
-void drawCamera(Eigen::Vector3d position, double r, double g, double b)
-{
-    //Eigen::Vector3d position = simCamera.position();
-    
-    glColor3f(r, g, b);
-    glPushMatrix();
-    glBegin(GL_POLYGON);
-    glVertex2d(position(0,0), position(1,0));
-    glVertex2d(position(0,0)+1.0, position(1,0)+1.0);
-    glVertex2d(position(0,0)+1.0, position(1,0)-1.0);
-    glEnd();
-    glPopMatrix();
-}
-
-void drawAxes()
-{
-    glColor3f(0.0, 0.0, 0.0);
-    glBegin(GL_LINES); //x
-    glVertex2d(0.0, 0.0);
-    glVertex2d(areaWidth, 0.0);
-    glEnd();
-    
-    glBegin(GL_LINES); //y
-    glVertex2d(0.0, 0.0);
-    glVertex2d(0.0, areaHeight);
-    glEnd();
-    
-    double hashSpace = 10.0;
-    double hashLength = 3.0;
-    
-    for (int i=0; i<areaWidth; i+=hashSpace)
-    {
-        glBegin(GL_LINES); // x axis hashes
-        glVertex2d(i, -1.0 * hashLength / 2.0);
-        glVertex2d(i,        hashLength / 2.0);
-        glEnd();
-    }
-    
-    for (int i=0; i<areaHeight; i+=hashSpace)
-    {
-        glBegin(GL_LINES); // y axis hashes
-        glVertex2d(-1.0 * hashLength / 2.0, i);
-        glVertex2d(       hashLength / 2.0, i);
-        glEnd();
-    }
-}
-
-void drawLandmark(double x, double y, double sideLength, double r, double g, double b)
-{
-    glColor3f(r, g, b);
-    
-    glPushMatrix();
-    
-    glTranslated(x, y, 0.0);
-    glRotated(45.0, 0.0, 0.0, 1.0);
+       trackball.tbMouse(button, state, x, y); 
        
-    glBegin(GL_QUADS);
-    glVertex2d(-1.0 * sideLength/2.0, -1.0 * sideLength/2.0);
-    glVertex2d(-1.0 * sideLength/2.0,        sideLength/2.0);
-    glVertex2d(       sideLength/2.0,        sideLength/2.0);
-    glVertex2d(       sideLength/2.0, -1.0 * sideLength/2.0);
-    glEnd();
+}
+
+void handleWheel(double zoom)
+{
+    //scene.zoom(zoom);
+    eyeZ += zoom;
+     glutPostRedisplay();
+}
+
+void handleKeyboardEvent(unsigned char key, int x, int y)
+{
+    Eigen::Vector3d tmpControl;
     
-    glPopMatrix();
-}
-
-void step()
-{
-    simCamera.timeStep();
-    filter.step(simCamera.defaultTimeStep, simCamera.measure(simScene));
-}
-
-void keyboardListener(unsigned char key, int x, int y)
-{
     switch (key)
     {
-        case 27: // Esc
-            exit(0);
+        case 'l': 
+           current_render_option=LINE_MODE; 
+           glutPostRedisplay();
+           break;
+        case 's':
+            current_render_option=SURFACE_MODE; 
+            glutPostRedisplay();
             break;
-        case 32: // Space
-            play = !play;
-            //step();
+        case 'e':
+            glCullFace(GL_BACK);
+            glEnable(GL_CULL_FACE);
+            glutPostRedisplay();
             break;
-        case 82: //R
-        case 114://r
-            simCamera.reset();
-            filter.reset(simCamera);
+        case 'd':
+            glDisable(GL_CULL_FACE);
+            glutPostRedisplay();
             break;
+        case ' ':
+            simCamera.timeStep();
+            filter.step(simCamera.defaultTimeStep, simCamera.measure(simScene));
+            glutPostRedisplay();
+            break;
+        case 'r':
+        case'R':
+//            scene.reset();
+            glutPostRedisplay();
+            break;
+        default: trackball.tbKeyboard(key);
     }
-    glutPostRedisplay();
 }
 
+void display(void)
+{
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+//    gluPerspective(33,1,2, scene.zFar);
+    gluPerspective(33,1,2, 1000);
+
+    glMatrixMode( GL_MODELVIEW );	// Set the view matrix ...
+    glLoadIdentity();			//... to identity.
+    gluLookAt(0,0,eyeZ, 0,0,0, 0,1,0);                   // camera is on the z-axis
+    trackball.tbMatrix();			// rotate scene using the trackball
+
+    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
+    simScene.draw();
+    simCamera.draw();
+    filter.draw();
+    
+    glFlush ();
+    glutSwapBuffers();
+}
+
+void init(void) 
+{
+    // select clearing color (for glClear)
+    glClearColor (0.4 , 0.4, 0.45, 0);	// RGB-value for grey-blue
+    // enable depth buffering
+    glEnable(GL_DEPTH_TEST);
+    // initialize view (simple orthographic projection)
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+
+    trackball.tbInit(GLUT_LEFT_BUTTON);
+   
+//    scene.init();
+
+    // enable shading and lighting
+    lighting.enable();
+    glShadeModel(GL_SMOOTH);
+}
+
+void reshape(int width, int height ) {
+    // Called at start, and whenever user resizes component
+    int size = min(width, height);
+    glViewport(0, 0, size, size);  // Largest possible square
+    trackball.tbReshape(width, height);
+}
+
+// create a double buffered colour window
 int main(int argc, char** argv)
-{    
-    glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_SINGLE);
-    glutInitWindowSize(1000,500);
-    glutInitWindowPosition(100,100);
+{
+    glutInit(&argc, argv);		
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+    glutInitWindowSize(windowWidth, windowHeight); 
+    glutInitWindowPosition(1000, 100);
     glutCreateWindow("UKF SLAM");
-    glutDisplayFunc(renderFunction);
-    glutIdleFunc(renderFunction);
-    glutKeyboardFunc(keyboardListener);
-    glutMainLoop();    
+    init ();								// initialise view
+    glutMouseFunc(handleMouseClick);		// Set function to handle mouse clicks
+    glutMotionFunc(handleMouseMotion);		// Set function to handle mouse motion
+    glutKeyboardFunc(handleKeyboardEvent);	// Set function to handle keyboard input
+    glutDisplayFunc(display);		// Set function to draw scene
+    glutReshapeFunc(reshape);		// Set function called if window gets resized
+    glutMainLoop();
     return 0;
 }
