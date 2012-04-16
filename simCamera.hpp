@@ -8,9 +8,14 @@
 #ifndef SIMCAMERA_HPP
 #define	SIMCAMERA_HPP
 
+#include <eigen3/Eigen/Geometry>
 #include <eigen3/Eigen/Dense>
 #include "simScene.hpp"
 #include "landmark.hpp"
+#include "normalRandom.hpp"
+#include <stdio.h>
+#include <math.h>
+#include <iostream>
 
 typedef Eigen::Matrix<double, 6, 1> Vector6d;
 
@@ -24,6 +29,7 @@ public:
     void reset();
     
     Eigen::Vector3d position();
+    void draw();
     std::vector<Landmark> map;
     
 //private:
@@ -58,6 +64,7 @@ public:
     
     double defaultInverseDepth;
     double defaultTimeStep;
+    static const double defaultFocalLength = 4.0;
 };
 
 #endif	/* SIMCAMERA_HPP */

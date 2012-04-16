@@ -8,13 +8,12 @@
 #ifndef UKF_HPP
 #define	UKF_HPP
 
+#include <GL/glut.h>
 #include <eigen3/Eigen/Geometry>
 #include <eigen3/Eigen/Dense>
 //#include <eigen3/Eigen/LU>
 #include <eigen3/Eigen/Cholesky>
-#include <boost/numeric/ublas/matrix.hpp>
-#include <boost/numeric/ublas/lu.hpp>
-#include <boost/numeric/ublas/io.hpp>
+#include "Color.hpp"
 #include "landmark.hpp"
 #include "simCamera.hpp"
 
@@ -27,6 +26,7 @@ public:
     void step(double timeStep, Eigen::VectorXd measurement);
     void step(double timeStep, Eigen::VectorXd control, Eigen::VectorXd measurement);
     Eigen::Vector3d position();
+    void draw();
     std::vector<Eigen::Vector2d, Eigen::aligned_allocator<Eigen::Vector2d> > landmarks();
     void reset(SimCamera simCamera);
 private:
@@ -96,6 +96,8 @@ private:
     void initializeVector2Zero(Eigen::VectorXd& vector);
     
     Eigen::Vector2d getEuclideanLandmark(int index);
+    
+    void drawCamera();
 };
 
 #endif	/* UKF_HPP */
