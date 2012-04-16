@@ -36,9 +36,9 @@ SimCamera::SimCamera(SimScene simScene)
     measurementNoiseMean(1,0) = 0.0;
     measurementNoiseMean(2,0) = 0.0;
     
-    measurementNoiseVariance(0,0) = 0.00001;
-    measurementNoiseVariance(1,0) = 0.00001;
-    measurementNoiseVariance(2,0) = 0.00001;
+    measurementNoiseVariance(0,0) = 0.001;
+    measurementNoiseVariance(1,0) = 0.001;
+    measurementNoiseVariance(2,0) = 0.001;
     
     Eigen::AngleAxisd aa(pi / 2.0, Eigen::Vector3d::UnitY());
     direction = aa;
@@ -74,9 +74,9 @@ void SimCamera::reset()
 {
     currTime = 0.0;
     
-    initialVelocity(0,0) = 0.0;
-    initialVelocity(1,0) = 0.0;
-    initialVelocity(2,0) = 0.0;
+    initialVelocity(0,0) = -5.0;
+    initialVelocity(1,0) = 30.0;
+    initialVelocity(2,0) = 10.0;
     
     initialPosition(0,0) = -1.0;
     initialPosition(1,0) = 200.0;

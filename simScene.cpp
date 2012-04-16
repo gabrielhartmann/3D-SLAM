@@ -27,11 +27,11 @@ SimScene::SimScene()
 //    landmarks.push_back(Eigen::Vector3d (50.0, 10.0, 0.0));
     
     landmarks.push_back(Eigen::Vector3d (100.0, 0.0, -100.0));
-    landmarks.push_back(Eigen::Vector3d (100.0, 0.0, 10.0));
+    landmarks.push_back(Eigen::Vector3d (100.0, 150.0, 0.0));
     landmarks.push_back(Eigen::Vector3d (100.0, 0.0, 100.0));
     
     landmarks.push_back(Eigen::Vector3d (100.0, 100.0, -100.0));
-    landmarks.push_back(Eigen::Vector3d (100.0, 100.0, 10.0));
+    landmarks.push_back(Eigen::Vector3d (100.0, 50.0, 0.0));
     landmarks.push_back(Eigen::Vector3d (100.0, 100.0, 100.0));
 }
 
