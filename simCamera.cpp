@@ -28,9 +28,9 @@ SimCamera::SimCamera(SimScene simScene)
     accelerationNoiseMean(1,0) = 0.0;
     accelerationNoiseMean(2,0) = 0.0;
     
-    accelerationNoiseVariance(0,0) = 0.001;
-    accelerationNoiseVariance(1,0) = 0.001;
-    accelerationNoiseVariance(2,0) = 0.001;
+    accelerationNoiseVariance(0,0) = 0.1;
+    accelerationNoiseVariance(1,0) = 0.1;
+    accelerationNoiseVariance(2,0) = 0.1;
     
     measurementNoiseMean(0,0) = 0.0;
     measurementNoiseMean(1,0) = 0.0;
@@ -50,7 +50,7 @@ SimCamera::SimCamera(SimScene simScene)
     
     double depth = 110.0;
     defaultInverseDepth = 1.0/depth;
-    defaultTimeStep = 0.33;
+    defaultTimeStep = 0.05;
     
     reset();
     initializeMap(simScene);
@@ -75,11 +75,11 @@ void SimCamera::reset()
     currTime = 0.0;
     
     initialVelocity(0,0) = 0.0;
-    initialVelocity(1,0) = -1.0;
+    initialVelocity(1,0) = 0.0;
     initialVelocity(2,0) = 0.0;
     
     initialPosition(0,0) = -1.0;
-    initialPosition(1,0) = 100.0;
+    initialPosition(1,0) = 200.0;
     initialPosition(2,0) = 0.0;
     
     position= initialPosition;
@@ -93,21 +93,22 @@ void SimCamera::reset()
 
 void SimCamera::timeStep()
 {
-    currTime += defaultTimeStep;
-    //camPosition = camPosition + defaultTimeStep * camVelocity ;
-    //addNoise2Position();
-
+//    currTime += defaultTimeStep;
+//    addNoise2Acceleration();
+//
+//    velocity = (acceleration * currTime) + initialVelocity;
+//    
+//    position = 
+//            (0.5 * acceleration * (currTime * currTime)) +
+//            (initialVelocity * currTime) +
+//            initialPosition;
+    
     addNoise2Acceleration();
-
-    velocity = (acceleration * currTime) + initialVelocity;
+    position = position + 
+            (0.5 * acceleration * (defaultTimeStep * defaultTimeStep)) +
+            (velocity * defaultTimeStep);
     
-    position = 
-            (0.5 * acceleration * (currTime * currTime)) +
-            (initialVelocity * currTime) +
-            initialPosition;
-    
-    //std::cout << "Noisy camera position:" << std::endl;
-    //std::cout << camPosition << std::endl;
+    velocity = velocity + acceleration * defaultTimeStep;
     
     //Reset acceleration -- doesn't appear to matter
     acceleration(0,0) = 0.0;
@@ -126,9 +127,9 @@ void SimCamera::addNoise2Acceleration()
     //acceleration(1,0) = acceleration(1,0) + noiseY;
     
     //Add noise to all 3 dimensions for 3D simulation
-    //acceleration[0] = acceleration[0] + noiseX;
+    acceleration[0] = acceleration[0] + noiseX;
     acceleration[1] = acceleration[1] + noiseY;
-    //acceleration[2] = acceleration[2] + noiseZ;
+    acceleration[2] = acceleration[2] + noiseZ;
 }
 
 void SimCamera::addNoise2Position()
@@ -147,10 +148,10 @@ void SimCamera::addNoise2Position()
 
 Eigen::VectorXd SimCamera::measure(SimScene simScene)
 {
-    //Assume all landmarks observed and 1D observations
-    Eigen::VectorXd observations(simScene.landmarks.size());
+    //Assume all landmarks observed and 2D observations
+    Eigen::VectorXd observations(simScene.landmarks.size() * 2);
     
-    for (int i=0; i<simScene.landmarks.size(); i++)
+    for (int i=0, j=0; i<simScene.landmarks.size(); i++, j+=2)
     {
         Eigen::Vector3d landmark;
         landmark << simScene.landmarks[i].x(), simScene.landmarks[i].y(), simScene.landmarks[i].z();
@@ -158,7 +159,8 @@ Eigen::VectorXd SimCamera::measure(SimScene simScene)
         Eigen::Matrix3d rotMat;
         rotMat = direction;
         
-        Eigen::Vector3d pixel = rotMat.transpose() * (landmark - position); // Landmark in camera coordinates
+        Eigen::Vector3d pixel;
+        pixel = rotMat.transpose() * (landmark - position); // Landmark in camera coordinates
         pixel[0] = pixel.x() / pixel.z();
         pixel[1] = pixel.y() / pixel.z();
         pixel[2] = 1.0;
@@ -166,7 +168,8 @@ Eigen::VectorXd SimCamera::measure(SimScene simScene)
         
         addNoise2Measurement(pixel);
         //Only returning y value for 2D
-        observations[i] = pixel.y();
+        observations[j] = pixel.x();
+        observations[j+1] = pixel.y();
     }
     //printf("Observations:\n");
     //std::cout << observations << std::endl;

@@ -35,6 +35,8 @@ SimScene simScene;
 SimCamera simCamera(simScene);
 ukf filter(simCamera);
 
+bool play = false;
+
 double defaultTimeStep = 0.05;
 
 void handleWheel(double zoom);
@@ -88,13 +90,12 @@ void handleKeyboardEvent(unsigned char key, int x, int y)
             glDisable(GL_CULL_FACE);
             break;
         case ' ':
-            simCamera.timeStep();
-            filter.step(simCamera.defaultTimeStep, simCamera.measure(simScene));
+            play = !play;
             break;
         case 'r':
         case'R':
-//            scene.reset();
-            
+            simCamera.reset();
+            filter.reset(simCamera);
             break;
         default: trackball.tbKeyboard(key);
     }
@@ -149,6 +150,16 @@ void reshape(int width, int height ) {
     trackball.tbReshape(width, height);
 }
 
+void idle()
+{
+    if (play)
+    {
+        simCamera.timeStep();
+        filter.step(simCamera.defaultTimeStep, simCamera.measure(simScene));
+        glutPostRedisplay();
+    }
+}
+
 // create a double buffered colour window
 int main(int argc, char** argv)
 {
@@ -163,6 +174,7 @@ int main(int argc, char** argv)
     glutKeyboardFunc(handleKeyboardEvent);	// Set function to handle keyboard input
     glutDisplayFunc(display);		// Set function to draw scene
     glutReshapeFunc(reshape);		// Set function called if window gets resized
+    glutIdleFunc(idle);
     glutMainLoop();
     return 0;
 }
