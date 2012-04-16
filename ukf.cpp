@@ -89,19 +89,19 @@ void ukf::drawCamera()
     
     Color::setColor(0.0, 0.0, 8.0); //blue
     //glNormal3d(-3.0, 3.0, 0.0);
-    glVertex3d(-3.0, 3.0, simCamera.defaultFocalLength);
+    glVertex3d(-3.0, 3.0, simCamera.defaultFocalLengthDrawn);
     
     //glNormal3d(3.0, 3.0, 0.0);
-    glVertex3d(3.0, 3.0, simCamera.defaultFocalLength);
+    glVertex3d(3.0, 3.0, simCamera.defaultFocalLengthDrawn);
     
      //glNormal3d(3.0, -3.0, 0.0);
-    glVertex3d(3.0, -3.0, simCamera.defaultFocalLength);
+    glVertex3d(3.0, -3.0, simCamera.defaultFocalLengthDrawn);
       
     //glNormal3d(-3.0, -3.0, 0.0);
-    glVertex3d(-3.0, -3.0, simCamera.defaultFocalLength);
+    glVertex3d(-3.0, -3.0, simCamera.defaultFocalLengthDrawn);
             
     //glNormal3d(3.0, 3.0, 0.0);
-    glVertex3d(-3.0, 3.0, simCamera.defaultFocalLength);
+    glVertex3d(-3.0, 3.0, simCamera.defaultFocalLengthDrawn);
     glEnd();
     
     glPopMatrix();
@@ -128,16 +128,15 @@ void ukf::reset(SimCamera simCamera)
 
 void ukf::initializeStateVector2D()
 {
-    //stateVector.resize(augmentedstateSize);
     stateVector.resize(cameraStateSize + numLandmarks * landmarkSize2D);
     initializeVector2Zero(stateVector);
     
-    stateVector(0,0) = simCamera.camPosition(0,0);
-    stateVector(1,0) = simCamera.camPosition(1,0);
-    stateVector(2,0) = simCamera.camVelocity(0,0);
-    stateVector(3,0) = simCamera.camVelocity(1,0);
-    stateVector(4,0) = simCamera.camAcceleration(0,0);
-    stateVector(5,0) = simCamera.camAcceleration(1,0);
+    stateVector(0,0) = simCamera.getPosition()(0,0);
+    stateVector(1,0) = simCamera.getPosition()(1,0);
+    stateVector(2,0) = simCamera.velocity(0,0);
+    stateVector(3,0) = simCamera.velocity(1,0);
+    stateVector(4,0) = simCamera.acceleration(0,0);
+    stateVector(5,0) = simCamera.acceleration(1,0);
     
     int mapOffset = cameraStateSize;
     for (int i=0, j=0; i<numLandmarks; i++, j+=landmarkSize2D)
@@ -206,7 +205,7 @@ void ukf::initializeMeasurementCovariance()
     
     for (int row=0; row<measurementCovariance.rows(); row++)
     {
-        measurementCovariance(row, row) = simCamera.camMeasurementNoiseVariance(1,0); //Square matrix so can do diagonal this way
+        measurementCovariance(row, row) = simCamera.measurementNoiseVariance(1,0); //Square matrix so can do diagonal this way
     }
 }
 
@@ -236,12 +235,12 @@ void ukf::initializeProcessCovariance()
     */
     
     processCovariance.resize(cameraStateSize + numLandmarks, cameraStateSize + numLandmarks); //landmarks only vary by inverse depth so only one entry per landmark
-    processCovariance(0,0) = simCamera.camPositionNoiseVariance(0,0);     //Horizontal position
-    processCovariance(1,1) = simCamera.camPositionNoiseVariance(1,0);     //Vertical position 
-    processCovariance(2,2) = simCamera.camVelocityNoiseVariance(0,0);     //Horizontal velocity
-    processCovariance(3,3) = simCamera.camVelocityNoiseVariance(1,0);     //Vertical velocity
-    processCovariance(4,4) = simCamera.camAccelerationNoiseVariance(0,0); //Horizontal acceleration
-    processCovariance(5,5) = simCamera.camAccelerationNoiseVariance(1,0); //Vertical acceleration
+    processCovariance(0,0) = simCamera.positionNoiseVariance(0,0);     //Horizontal position
+    processCovariance(1,1) = simCamera.positionNoiseVariance(1,0);     //Vertical position 
+    processCovariance(2,2) = simCamera.velocityNoiseVariance(0,0);     //Horizontal velocity
+    processCovariance(3,3) = simCamera.velocityNoiseVariance(1,0);     //Vertical velocity
+    processCovariance(4,4) = simCamera.accelerationNoiseVariance(0,0); //Horizontal acceleration
+    processCovariance(5,5) = simCamera.accelerationNoiseVariance(1,0); //Vertical acceleration
     
     for (int i=cameraStateSize; i<processCovariance.rows(); i++)
     {

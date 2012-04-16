@@ -28,43 +28,50 @@ public:
     Eigen::VectorXd measure(SimScene simScene);
     void reset();
     
-    Eigen::Vector3d position();
+    Eigen::Vector3d getPosition();
     void draw();
     std::vector<Landmark> map;
     
 //private:
     double currTime;
     
-    Eigen::Vector3d camInitialVelocity;
-    Eigen::Vector3d camInitialPosition;
+    Eigen::Vector3d initialVelocity;
+    Eigen::Vector3d initialPosition;
     
-    Eigen::Vector3d camPosition;
-    Eigen::Vector3d camDirection;
-    Eigen::Vector3d camVelocity;
-    Eigen::Vector3d camAcceleration;
+    Eigen::Vector3d position;
+    Eigen::Vector3d velocity;
+    Eigen::Vector3d acceleration;
     
-    Eigen::Vector3d camPositionNoiseMean;
-    Eigen::Vector3d camPositionNoiseVariance;
+    Eigen::Vector3d positionNoiseMean;
+    Eigen::Vector3d positionNoiseVariance;
     
-    Eigen::Vector3d camVelocityNoiseMean;
-    Eigen::Vector3d camVelocityNoiseVariance;
+    Eigen::Vector3d velocityNoiseMean;
+    Eigen::Vector3d velocityNoiseVariance;
     
-    Eigen::Vector3d camAccelerationNoiseMean;
-    Eigen::Vector3d camAccelerationNoiseVariance;
+    Eigen::Vector3d accelerationNoiseMean;
+    Eigen::Vector3d accelerationNoiseVariance;
     
-    Eigen::Vector3d camMeasurementNoiseMean;
-    Eigen::Vector3d camMeasurementNoiseVariance;
+    Eigen::Vector3d measurementNoiseMean;
+    Eigen::Vector3d measurementNoiseVariance;
     
     void addNoise2Acceleration();
     void addNoise2Position();
     void addNoise2Measurement(Eigen::Vector3d& imagePoint);
     
     void initializeMap(SimScene simScene);
-    double angleV2V(Eigen::Vector3d v1, Eigen::Vector3d v2);
     
     double defaultInverseDepth;
     double defaultTimeStep;
-    static const double defaultFocalLength = 4.0;
+    
+    static const double defaultFocalLengthDrawn = 4.0;
+    
+private:
+    double pi;
+    
+    Eigen::Quaterniond direction;
+    Eigen::Matrix3d intrinsicCalibrationMatrix;
+    
+    double focalLength;
 };
 
 #endif	/* SIMCAMERA_HPP */
