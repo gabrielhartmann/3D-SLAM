@@ -335,6 +335,8 @@ void ukf::initializeProcessCovariance()
     {
         processCovariance(i,i) = inverseDepthVariance;
     }
+    
+    print("Process Covariance:", processCovariance);
 }
 
 int ukf::getLandmarkIndex(int i)
@@ -387,24 +389,14 @@ void ukf::generateSigmaPoints(Eigen::VectorXd stVector, Eigen::MatrixXd covMatri
     
     // Scale and square root augmented state covariance
     Eigen::MatrixXd scaledStateCovariance = (lambda + N) * covMatrix;
-//    printf("The scaled state covariance:\n");
-//    std::cout << scaledStateCovariance << std::endl << std::endl;
-    
     Eigen::LLT<Eigen::MatrixXd> lDecomp(scaledStateCovariance);
     Eigen::MatrixXd S = lDecomp.matrixL();
-    
-    //printf("Square Root of the scaled state covariance\n");
-    //std::cout << S << std::endl << std::endl;
-    
-    //printf("Check that L * L^T = original\n");
-    //std::cout << S * S.transpose() << std::endl << std::endl;
-    
+       
     sigmaPoints.push_back(stVector); // Add the mean
     
     for (int i=0; i<N; i++) // Add the spread points
     {
-        Eigen::VectorXd column = getColumn(S, i);
-        
+        Eigen::VectorXd column = getColumn(S, i);    
         Eigen::VectorXd sigmaPoint = stVector + column; // +
         sigmaPoints.push_back(sigmaPoint);
         
@@ -412,6 +404,7 @@ void ukf::generateSigmaPoints(Eigen::VectorXd stVector, Eigen::MatrixXd covMatri
         sigmaPoints.push_back(sigmaPoint);
     }
     
+//    printf("# of sigma points = %d\n", sigmaPoints.size());
     //printSigmaPoints();
 }
 
@@ -462,13 +455,6 @@ void ukf::augmentStateCovariance()
     //printf("startIndex = %d    numRows = %d\n", unaugmentedStateSize, augmentedStateSize-unaugmentedStateSize);
     //Add Q (i.e.) process noise covariance
     stateCovariance.block(stateSize, stateSize, stateCovariance.rows()-stateSize, stateCovariance.cols()-stateSize) = processCovariance;
-    
-//    printf("Augmented and Cleaned State Covariance:\n");
-//    std::cout << stateCovariance << std::endl << std::endl;
-    
-//    printf("processCovariance:\n");
-//    std::cout << processCovariance << std::endl << std::endl;
-//    printf("\n");
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -478,11 +464,6 @@ void ukf::processUpdate(double deltaT)
 {
     augmentStateVector();
     augmentStateCovariance();
-    
-    //printf("Augmented State Vector:\n");
-    //std::cout << stateVector << std::endl << std::endl;
-    //printf("Augmented State Covariance:\n");
-    //std::cout << stateCovariance << std::endl << std::endl;
     
     generateSigmaPoints(stateVector, stateCovariance);
     for (int i=0; i<sigmaPoints.size(); i++)
@@ -620,6 +601,7 @@ void ukf::processFunction3D(Eigen::VectorXd& sigmaPoint, double deltaT)
     acceleration[0] = sigmaPoint[6];
     acceleration[1] = sigmaPoint[7];
     acceleration[2] = sigmaPoint[8];
+    
 
     Eigen::Vector3d positionNoise;
     positionNoise[0] = sigmaPoint[stateSize];
@@ -641,12 +623,21 @@ void ukf::processFunction3D(Eigen::VectorXd& sigmaPoint, double deltaT)
     velocity = velocity + velocityNoise;
     position = position + positionNoise;
     
+//     if (accelerationNoise.x() != 0.0)
+//    {
+//        printf("Acceleration Noise: (%f, %f, %f)\n", accelerationNoise.x(), accelerationNoise.y(), accelerationNoise.z());
+//        printf("Acceleration after noise: (%f, %f, %f)\n", acceleration.x(), acceleration.y(), acceleration.z());
+//    }
+    
     position = position + 
             (0.5 * acceleration * (deltaT * deltaT)) +
             (velocity * deltaT);
     
     velocity = velocity + acceleration * deltaT;
      
+//    printf("Position after noise: (%.20f, %f, %f)\n", position.x(), position.y(), position.z());
+//    printf("\n");
+    
     // Put process results back into the sigma point.
     sigmaPoint[0] = position.x();
     sigmaPoint[1] = position.y();
@@ -878,9 +869,8 @@ void ukf::measurementUpdate(Eigen::VectorXd measurement)
 //    std::cout << aPrioriStateMean << std::endl <<std::endl;
     
     stateVector = aPrioriStateMean + K * (measurement - aPrioriMeasurementsMean);
-    //printf("New State Vector:\n");
-    //std::cout << stateVector << std::endl << std::endl;
-    //printStateVector(stateVector);
+//    printf("New Position: (%.20f, %.20f %.20f)\n", stateVector[0], stateVector[1], stateVector[2]);
+//    printf("\n");
     
     stateCovariance = aPrioriStateCovariance - (K * Pzz * K.transpose());
     
