@@ -76,33 +76,29 @@ void handleKeyboardEvent(unsigned char key, int x, int y)
     {
         case 'l': 
            current_render_option=LINE_MODE; 
-           glutPostRedisplay();
            break;
         case 's':
             current_render_option=SURFACE_MODE; 
-            glutPostRedisplay();
             break;
         case 'e':
             glCullFace(GL_BACK);
-            glEnable(GL_CULL_FACE);
-            glutPostRedisplay();
+            glEnable(GL_CULL_FACE);            
             break;
         case 'd':
             glDisable(GL_CULL_FACE);
-            glutPostRedisplay();
             break;
         case ' ':
             simCamera.timeStep();
             filter.step(simCamera.defaultTimeStep, simCamera.measure(simScene));
-            glutPostRedisplay();
             break;
         case 'r':
         case'R':
 //            scene.reset();
-            glutPostRedisplay();
+            
             break;
         default: trackball.tbKeyboard(key);
     }
+    glutPostRedisplay();
 }
 
 void display(void)

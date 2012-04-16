@@ -6,41 +6,47 @@ SimCamera::SimCamera(){}
 
 SimCamera::SimCamera(SimScene simScene)
 {
-    camPositionNoiseMean(0,0) = 0.0;
-    camPositionNoiseMean(1,0) = 0.0;
-    camPositionNoiseMean(2,0) = 0.0;
+    pi = 3.1415926535897932384626433832795028841971693993751058;
     
-    camPositionNoiseVariance(0,0) = 0.001;
-    camPositionNoiseVariance(1,0) = 0.001;
-    camPositionNoiseVariance(2,0) = 0.001;
+    positionNoiseMean(0,0) = 0.0;
+    positionNoiseMean(1,0) = 0.0;
+    positionNoiseMean(2,0) = 0.0;
     
-    camVelocityNoiseMean(0,0) = 0.0;
-    camVelocityNoiseMean(1,0) = 0.0;
-    camVelocityNoiseMean(2,0) = 0.0;
+    positionNoiseVariance(0,0) = 0.001;
+    positionNoiseVariance(1,0) = 0.001;
+    positionNoiseVariance(2,0) = 0.001;
     
-    camVelocityNoiseVariance(0,0) = 0.001;
-    camVelocityNoiseVariance(1,0) = 0.001;
-    camVelocityNoiseVariance(2,0) = 0.001;
+    velocityNoiseMean(0,0) = 0.0;
+    velocityNoiseMean(1,0) = 0.0;
+    velocityNoiseMean(2,0) = 0.0;
     
-    camAccelerationNoiseMean(0,0) = 0.0;
-    camAccelerationNoiseMean(1,0) = 0.0;
-    camAccelerationNoiseMean(2,0) = 0.0;
+    velocityNoiseVariance(0,0) = 0.001;
+    velocityNoiseVariance(1,0) = 0.001;
+    velocityNoiseVariance(2,0) = 0.001;
     
-    camAccelerationNoiseVariance(0,0) = 0.001;
-    camAccelerationNoiseVariance(1,0) = 0.001;
-    camAccelerationNoiseVariance(2,0) = 0.001;
+    accelerationNoiseMean(0,0) = 0.0;
+    accelerationNoiseMean(1,0) = 0.0;
+    accelerationNoiseMean(2,0) = 0.0;
     
-    camMeasurementNoiseMean(0,0) = 0.0;
-    camMeasurementNoiseMean(1,0) = 0.0;
-    camMeasurementNoiseMean(2,0) = 0.0;
+    accelerationNoiseVariance(0,0) = 0.001;
+    accelerationNoiseVariance(1,0) = 0.001;
+    accelerationNoiseVariance(2,0) = 0.001;
     
-    camMeasurementNoiseVariance(0,0) = 0.00001;
-    camMeasurementNoiseVariance(1,0) = 0.00001;
-    camMeasurementNoiseVariance(2,0) = 0.00001;
+    measurementNoiseMean(0,0) = 0.0;
+    measurementNoiseMean(1,0) = 0.0;
+    measurementNoiseMean(2,0) = 0.0;
     
-    camDirection(0,0) = 1.0;
-    camDirection(1,0) = 0.0;
-    camDirection(2,0) = 0.0;
+    measurementNoiseVariance(0,0) = 0.00001;
+    measurementNoiseVariance(1,0) = 0.00001;
+    measurementNoiseVariance(2,0) = 0.00001;
+    
+    Eigen::AngleAxisd aa(pi / 2.0, Eigen::Vector3d::UnitY());
+    direction = aa;
+    
+    focalLength = 1.0;
+    intrinsicCalibrationMatrix << focalLength,                0.0, 0.0,
+                                                                    0.0, focalLength, 0.0,
+                                                                    0.0,                0.0, 1.0;
     
     double depth = 110.0;
     defaultInverseDepth = 1.0/depth;
@@ -55,7 +61,7 @@ void SimCamera::initializeMap(SimScene simScene)
     for (int i=0; i<simScene.landmarks.size(); i++)
     {
         Eigen::Vector3d origin;
-        origin = camPosition;
+        origin = getPosition();
         
         Landmark landmark(origin, 
                           simScene.landmarks.at(i) - origin, 
@@ -64,90 +70,77 @@ void SimCamera::initializeMap(SimScene simScene)
     }
 }
 
-double SimCamera::angleV2V(Eigen::Vector3d v1, Eigen::Vector3d v2)
-{
-    v1.normalize();
-    v2.normalize();
-    double angle = acos(v1.dot(v2));
-    if (v2(1,0) < v1(1,0))
-    {
-        angle *= -1.0;
-    }
-    /*
-    printf("angle = %f in radians\n", angle);
-    printf("angle = %f in degrees\n", angle * 180.0/3.1415927);
-    */
-    
-    return angle;
-}
-
 void SimCamera::reset()
 {
     currTime = 0.0;
     
-    camInitialVelocity(0,0) = 0.0;
-    camInitialVelocity(1,0) = -1.0;
-    camInitialVelocity(2,0) = 0.0;
+    initialVelocity(0,0) = 0.0;
+    initialVelocity(1,0) = -1.0;
+    initialVelocity(2,0) = 0.0;
     
-    camInitialPosition(0,0) = -1.0;
-    camInitialPosition(1,0) = 100.0;
-    camInitialPosition(2,0) = 0.0;
+    initialPosition(0,0) = -1.0;
+    initialPosition(1,0) = 100.0;
+    initialPosition(2,0) = 0.0;
     
-    camPosition = camInitialPosition;
-    camVelocity = camInitialVelocity;
+    position= initialPosition;
+    velocity = initialVelocity;
     
-    camAcceleration(0,0) = 0.0;
-    camAcceleration(1,0) = -9.81;
-    camAcceleration(2,0) = 0.0;
+    acceleration(0,0) = 0.0;
+    acceleration(1,0) = -9.81;
+    acceleration(2,0) = 0.0;
     
 }
 
 void SimCamera::timeStep()
 {
     currTime += defaultTimeStep;
-    //camPosition = camPosition + defaultTimeStep * camVelocity ;       
+    //camPosition = camPosition + defaultTimeStep * camVelocity ;
     //addNoise2Position();
 
     addNoise2Acceleration();
 
-    camVelocity = (camAcceleration * currTime) + camInitialVelocity;
+    velocity = (acceleration * currTime) + initialVelocity;
     
-    camPosition = 
-            (0.5 * camAcceleration * (currTime * currTime)) +
-            (camInitialVelocity * currTime) +
-            camInitialPosition;
+    position = 
+            (0.5 * acceleration * (currTime * currTime)) +
+            (initialVelocity * currTime) +
+            initialPosition;
     
     //std::cout << "Noisy camera position:" << std::endl;
     //std::cout << camPosition << std::endl;
     
-    //Reset acceleration
-    camAcceleration(0,0) = 0.0;
-    camAcceleration(1,0) = -9.81;
-    camAcceleration(2,0) = 0.0;
+    //Reset acceleration -- doesn't appear to matter
+    acceleration(0,0) = 0.0;
+    acceleration(1,0) = -9.81;
+    acceleration(2,0) = 0.0;
     
 }
 
 void SimCamera::addNoise2Acceleration()
 {
-    double noiseX = generateNoise(camAccelerationNoiseMean(0,0), camAccelerationNoiseVariance(0,0));
-    double noiseY = generateNoise(camAccelerationNoiseMean(1,0), camAccelerationNoiseVariance(1,0));
-    double noiseZ = generateNoise(camAccelerationNoiseMean(2,0), camAccelerationNoiseVariance(2,0));
+    double noiseX = generateNoise(accelerationNoiseMean(0,0), accelerationNoiseVariance(0,0));
+    double noiseY = generateNoise(accelerationNoiseMean(1,0), accelerationNoiseVariance(1,0));
+    double noiseZ = generateNoise(accelerationNoiseMean(2,0), accelerationNoiseVariance(2,0));
     
     //Only add noise to Y value for 2d simulation
-    camAcceleration(1,0) = camAcceleration(1,0) + noiseY;
-    printf("ACTUAL ACCELERATION = %.10f\n", camAcceleration(1,0));
+    //acceleration(1,0) = acceleration(1,0) + noiseY;
+    
+    //Add noise to all 3 dimensions for 3D simulation
+    //acceleration[0] = acceleration[0] + noiseX;
+    acceleration[1] = acceleration[1] + noiseY;
+    //acceleration[2] = acceleration[2] + noiseZ;
 }
 
 void SimCamera::addNoise2Position()
 {
-    double noiseX = generateNoise(camPositionNoiseMean(0,0), camPositionNoiseVariance(0,0));
-    double noiseY = generateNoise(camPositionNoiseMean(1,0), camPositionNoiseVariance(1,0));
-    double noiseZ = generateNoise(camPositionNoiseMean(2,0), camPositionNoiseVariance(2,0));
+    double noiseX = generateNoise(positionNoiseMean(0,0), positionNoiseVariance(0,0));
+    double noiseY = generateNoise(positionNoiseMean(1,0), positionNoiseVariance(1,0));
+    double noiseZ = generateNoise(positionNoiseMean(2,0), positionNoiseVariance(2,0));
     
     //printf("Perfect  Position = %f\n", camPosition(1,0));
     
     //Only put noise on Y value for 2d simulation
-    camPosition(1,0) = camPosition(1,0) + noiseY;
+    position(1,0) = position(1,0) + noiseY;
     
     //printf("Noisy    Position = %f\n", camPosition(1,0));
 }
@@ -159,26 +152,21 @@ Eigen::VectorXd SimCamera::measure(SimScene simScene)
     
     for (int i=0; i<simScene.landmarks.size(); i++)
     {
-        double slope = (simScene.landmarks.at(i)(1,0) - camPosition(1,0)) /
-                       (simScene.landmarks.at(i)(0,0) - camPosition(0,0));
-        double yIntercept = camPosition(1,0) - (slope * camPosition(0,0));
+        Eigen::Vector3d landmark;
+        landmark << simScene.landmarks[i].x(), simScene.landmarks[i].y(), simScene.landmarks[i].z();
         
-        Eigen::Vector3d imagePoint(0.0, yIntercept, 0.0);
-        imagePoint = imagePoint - camPosition;
+        Eigen::Matrix3d rotMat;
+        rotMat = direction;
         
-        /*
-        printf("Imagepoint %d\n", i);
-        std::cout << imagePoint << std::endl;
-        */
+        Eigen::Vector3d pixel = rotMat.transpose() * (landmark - position); // Landmark in camera coordinates
+        pixel[0] = pixel.x() / pixel.z();
+        pixel[1] = pixel.y() / pixel.z();
+        pixel[2] = 1.0;
+        pixel = intrinsicCalibrationMatrix * pixel; //Projected landmark
         
-        addNoise2Measurement(imagePoint);
-        
-        /*
-        printf("Imagepoint after noise\n");
-        std::cout << imagePoint << std::endl;
-        */
-        
-        observations(i,0) = imagePoint(1,0); //Observation = y value of projection
+        addNoise2Measurement(pixel);
+        //Only returning y value for 2D
+        observations[i] = pixel.y();
     }
     //printf("Observations:\n");
     //std::cout << observations << std::endl;
@@ -187,27 +175,33 @@ Eigen::VectorXd SimCamera::measure(SimScene simScene)
 
 void SimCamera::addNoise2Measurement(Eigen::Vector3d& imagePoint)
 {
-    double noiseX = generateNoise(camMeasurementNoiseMean(0,0), camMeasurementNoiseVariance(0,0));
-    double noiseY = generateNoise(camMeasurementNoiseMean(1,0), camMeasurementNoiseVariance(1,0));
-    double noiseZ = generateNoise(camMeasurementNoiseMean(2,0), camMeasurementNoiseVariance(2,0));    
+    double noiseX = generateNoise(measurementNoiseMean(0,0), measurementNoiseVariance(0,0));
+    double noiseY = generateNoise(measurementNoiseMean(1,0), measurementNoiseVariance(1,0));
+    double noiseZ = generateNoise(measurementNoiseMean(2,0), measurementNoiseVariance(2,0));    
     
     //Only add noise to y dimension for 2d example
-    imagePoint(1,0) = imagePoint(1,0) + noiseY;
+    //imagePoint(1,0) = imagePoint(1,0) + noiseY;
+    
+    //Add noise to both image plane dimensions for 3d
+    imagePoint[0] = imagePoint[0] + noiseX;
+    imagePoint[1] = imagePoint[1] + noiseY;
 }
 
-Eigen::Vector3d SimCamera::position()
+Eigen::Vector3d SimCamera::getPosition()
 {
     //printf("Simulated Camera Position: (%f, %f)\n", camPosition(0,0), camPosition(1,0));
-    return camPosition;
+    return position;
 }
 
 void SimCamera::draw()
 {
      glPushMatrix();
     
-    glTranslated(camPosition[0], camPosition[1], camPosition[2]);
-    Eigen::AngleAxisd aa(90.0, Eigen::Vector3d::UnitY());
-    glRotated(aa.angle(), aa.axis().x(), aa.axis().y(), aa.axis().z());
+    glTranslated(position[0], position[1], position[2]);
+    Eigen::AngleAxisd aa;
+    aa = direction;
+    
+    glRotated(aa.angle() * 180.0 / pi, aa.axis().x(), aa.axis().y(), aa.axis().z());
     
     glBegin(GL_TRIANGLE_FAN);
     
@@ -218,19 +212,19 @@ void SimCamera::draw()
     
     Color::setColor(0.8, 0.0, 0.0); //red
     //glNormal3d(-3.0, 3.0, 0.0);
-    glVertex3d(-3.0, 3.0, defaultFocalLength);
+    glVertex3d(-3.0, 3.0, defaultFocalLengthDrawn);
     
     //glNormal3d(3.0, 3.0, 0.0);
-    glVertex3d(3.0, 3.0, defaultFocalLength);
+    glVertex3d(3.0, 3.0, defaultFocalLengthDrawn);
     
      //glNormal3d(3.0, -3.0, 0.0);
-    glVertex3d(3.0, -3.0, defaultFocalLength);
+    glVertex3d(3.0, -3.0, defaultFocalLengthDrawn);
       
     //glNormal3d(-3.0, -3.0, 0.0);
-    glVertex3d(-3.0, -3.0, defaultFocalLength);
+    glVertex3d(-3.0, -3.0, defaultFocalLengthDrawn);
             
     //glNormal3d(3.0, 3.0, 0.0);
-    glVertex3d(-3.0, 3.0, defaultFocalLength);
+    glVertex3d(-3.0, 3.0, defaultFocalLengthDrawn);
     glEnd();
     
     glPopMatrix();
