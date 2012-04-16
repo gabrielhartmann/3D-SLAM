@@ -19,10 +19,12 @@ ukf::ukf(SimCamera simCamera)
 void ukf::initialize()
 {
     filterStepCount = 0;
-    stateSize = cameraStateSize + numLandmarks * landmarkSize2D;
+    stateSize = cameraStateSize + numLandmarks * landmarkSize;
     
-    initializeStateVector2D();
-    initializeStateCovariance2D();
+    //initializeStateVector2D();
+    initializeStateVector3D();
+    //initializeStateCovariance2D();
+    initializeStateCovariance3D();
     initializeProcessCovariance();
     initializeMeasurementCovariance();
     
@@ -40,6 +42,7 @@ void ukf::step(double timeStep, Eigen::VectorXd measurement)
     printf("======================================================================\n");
     processUpdate(timeStep);
     measurementUpdate(measurement);
+    printf("Position = (%f, %f, %f)\n", stateVector[0], stateVector[1], stateVector[2]);
     //printStateVector(stateVector);
     //printf("======================================================================\n");
     //printf("                                %d                                    \n", filterStepCount);
@@ -53,7 +56,8 @@ void ukf::step(double timeStep, Eigen::VectorXd control, Eigen::VectorXd measure
 
 Eigen::Vector3d ukf::position()
 {
-    Eigen::Vector3d pos(stateVector(0,0), stateVector(1,0), 0.0);
+    //Eigen::Vector3d pos(stateVector(0,0), stateVector(1,0), 0.0);
+    Eigen::Vector3d pos(stateVector[0], stateVector[1], stateVector[2]);
     //printf("Filtered Camera Position: (%f, %f)\n", pos(0,0), pos(1,0));
     return pos;
 }
@@ -66,7 +70,8 @@ void ukf::draw()
     for (int i=0; i < landmarks().size(); i++)
     {
         glPushMatrix();
-        glTranslated(landmarks()[i].x(), landmarks()[i].y(), 0.0);
+        //glTranslated(landmarks()[i].x(), landmarks()[i].y(), 0.0);
+        glTranslated(landmarks()[i].x(), landmarks()[i].y(), landmarks()[i].z());
         glutSolidCube(2.0);
         glPopMatrix();
     }
@@ -107,10 +112,10 @@ void ukf::drawCamera()
     glPopMatrix();
 }
 
-std::vector<Eigen::Vector2d, Eigen::aligned_allocator<Eigen::Vector2d> > ukf::landmarks()
+std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> > ukf::landmarks()
 {
-    std::vector<Eigen::Vector2d, Eigen::aligned_allocator<Eigen::Vector2d> > lms;
-    for (int i=0, j=0; i<numLandmarks; i++, j+=landmarkSize2D)
+    std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> > lms;
+    for (int i=0, j=0; i<numLandmarks; i++, j+=landmarkSize)
     {
         lms.push_back(getEuclideanLandmark(i));
     }
@@ -128,7 +133,7 @@ void ukf::reset(SimCamera simCamera)
 
 void ukf::initializeStateVector2D()
 {
-    stateVector.resize(cameraStateSize + numLandmarks * landmarkSize2D);
+    stateVector.resize(cameraStateSize + numLandmarks * landmarkSize);
     initializeVector2Zero(stateVector);
     
     stateVector(0,0) = simCamera.getPosition()(0,0);
@@ -139,7 +144,7 @@ void ukf::initializeStateVector2D()
     stateVector(5,0) = simCamera.acceleration(1,0);
     
     int mapOffset = cameraStateSize;
-    for (int i=0, j=0; i<numLandmarks; i++, j+=landmarkSize2D)
+    for (int i=0, j=0; i<numLandmarks; i++, j+=landmarkSize)
     {
         Eigen::Vector3d origin = simCamera.map.at(i).origin;
         Eigen::Vector3d direction = simCamera.map.at(i).direction;
@@ -149,6 +154,40 @@ void ukf::initializeStateVector2D()
         stateVector(mapOffset + j + 2, 0) = direction(0,0);
         stateVector(mapOffset + j + 3, 0) = direction(1,0);
         stateVector(mapOffset + j + 4, 0) = inverseDepth;
+    }
+    
+    printf("State Vector Initialized:\n");
+    printStateVector(stateVector);
+}
+
+void ukf::initializeStateVector3D()
+{
+    stateVector.resize(cameraStateSize + numLandmarks * landmarkSize);
+    initializeVector2Zero(stateVector);
+    
+    stateVector[0] = simCamera.getPosition()[0];
+    stateVector[1] = simCamera.getPosition()[1];
+    stateVector[2] = simCamera.getPosition()[2];
+    stateVector[3] = simCamera.velocity[0];
+    stateVector[4] = simCamera.velocity[1];
+    stateVector[5] = simCamera.velocity[2];
+    stateVector[6] = simCamera.acceleration[0];
+    stateVector[7] = simCamera.acceleration[1];
+    stateVector[8] = simCamera.acceleration[2];
+    
+    int mapOffset = cameraStateSize;
+    for (int i=0, j=0; i<numLandmarks; i++, j+=landmarkSize)
+    {
+        Eigen::Vector3d origin = simCamera.map.at(i).origin;
+        Eigen::Vector3d direction = simCamera.map.at(i).direction;
+        double inverseDepth = simCamera.map.at(i).inverseDepth;
+        stateVector[mapOffset + j]        = origin[0];
+        stateVector[mapOffset + j + 1] = origin[1];
+        stateVector[mapOffset + j + 2] = origin[2];
+        stateVector[mapOffset + j + 3] = direction[0];
+        stateVector[mapOffset + j + 4] = direction[1];
+        stateVector[mapOffset + j + 5] = direction[2];
+        stateVector[mapOffset + j + 6] = inverseDepth;
     }
     
     printf("State Vector Initialized:\n");
@@ -186,7 +225,7 @@ void ukf::initializeStateCovariance2D()
     //Set landmark variances
     for (int i=0; i<numLandmarks; i++)
     {
-        int index = getLandmarkIndex2D(i);
+        int index = getLandmarkIndex(i);
         //Origin
         stateCovariance(index, index) = 0.0;
         stateCovariance(index + 1, index + 1) = 0.0;
@@ -198,14 +237,60 @@ void ukf::initializeStateCovariance2D()
     }
 }
 
+void ukf::initializeStateCovariance3D()
+{
+    stateCovariance.resize(stateVector.rows(), stateVector.rows());
+    
+    //Set to diagonal
+    for (int i=0; i<stateCovariance.rows(); i++)
+    {
+        for (int j=0; j<stateCovariance.cols(); j++)
+        {
+            if(i == j)
+            {
+                if (i >= 0 && i < cameraStateSize) //Initial Camera position, velocity and acceleration perfectly known
+                {
+                    stateCovariance(i,j) = 0.0;
+                }
+                else
+                {
+                    stateCovariance(i,j) = 0.01;
+                }
+                
+            }
+            else
+            {
+                stateCovariance(i,j) = 0.0; 
+            }
+        }
+    }
+    
+    //Set landmark variances
+    for (int i=0; i<numLandmarks; i++)
+    {
+        int index = getLandmarkIndex(i);
+        //Origin
+        stateCovariance(index, index) = 0.0;
+        stateCovariance(index + 1, index + 1) = 0.0;
+        stateCovariance(index + 2, index + 2) = 0.0;
+        //Direction
+        stateCovariance(index + 3, index + 3) = 0.0;
+        stateCovariance(index + 4, index + 4) = 0.0;
+        stateCovariance(index + 5, index + 5) = 0.0;
+        //Inverse Depth
+        stateCovariance(index+6, index+6) = inverseDepthVariance;
+    }
+}
+
 void ukf::initializeMeasurementCovariance()
 {
-    measurementCovariance.resize(numLandmarks, numLandmarks);
+    measurementCovariance.resize(numLandmarks * 2, numLandmarks * 2);
     initializeMatrix2Zero(measurementCovariance);
     
-    for (int row=0; row<measurementCovariance.rows(); row++)
+    for (int row=0; row<measurementCovariance.rows(); row+=2)
     {
-        measurementCovariance(row, row) = simCamera.measurementNoiseVariance(1,0); //Square matrix so can do diagonal this way
+        measurementCovariance(row, row) = simCamera.measurementNoiseVariance[1]; // Y
+        measurementCovariance(row+1, row+1) = simCamera.measurementNoiseVariance[2]; // Z
     }
 }
 
@@ -235,12 +320,16 @@ void ukf::initializeProcessCovariance()
     */
     
     processCovariance.resize(cameraStateSize + numLandmarks, cameraStateSize + numLandmarks); //landmarks only vary by inverse depth so only one entry per landmark
+    initializeMatrix2Zero(processCovariance);
     processCovariance(0,0) = simCamera.positionNoiseVariance(0,0);     //Horizontal position
     processCovariance(1,1) = simCamera.positionNoiseVariance(1,0);     //Vertical position 
-    processCovariance(2,2) = simCamera.velocityNoiseVariance(0,0);     //Horizontal velocity
-    processCovariance(3,3) = simCamera.velocityNoiseVariance(1,0);     //Vertical velocity
-    processCovariance(4,4) = simCamera.accelerationNoiseVariance(0,0); //Horizontal acceleration
-    processCovariance(5,5) = simCamera.accelerationNoiseVariance(1,0); //Vertical acceleration
+    processCovariance(2,2) = simCamera.positionNoiseVariance(2,0);     //Depth position 
+    processCovariance(3,3) = simCamera.velocityNoiseVariance(0,0);     //Horizontal velocity
+    processCovariance(4,4) = simCamera.velocityNoiseVariance(1,0);     //Vertical velocity
+    processCovariance(5,5) = simCamera.velocityNoiseVariance(2,0);     //Depth velocity
+    processCovariance(6,6) = simCamera.accelerationNoiseVariance(0,0); //Horizontal acceleration
+    processCovariance(7,7) = simCamera.accelerationNoiseVariance(1,0); //Vertical acceleration
+    processCovariance(8,8) = simCamera.accelerationNoiseVariance(2,0); //Depthl acceleration
     
     for (int i=cameraStateSize; i<processCovariance.rows(); i++)
     {
@@ -248,7 +337,7 @@ void ukf::initializeProcessCovariance()
     }
 }
 
-int ukf::getLandmarkIndex2D(int i)
+int ukf::getLandmarkIndex(int i)
 {
     if (i > numLandmarks)
     {
@@ -256,7 +345,7 @@ int ukf::getLandmarkIndex2D(int i)
         return -1;
     }
     
-    return cameraStateSize + (i * landmarkSize2D);
+    return cameraStateSize + (i * landmarkSize);
 }
 
 Eigen::VectorXd ukf::getColumn(Eigen::MatrixXd M, int colIndex)
@@ -298,8 +387,8 @@ void ukf::generateSigmaPoints(Eigen::VectorXd stVector, Eigen::MatrixXd covMatri
     
     // Scale and square root augmented state covariance
     Eigen::MatrixXd scaledStateCovariance = (lambda + N) * covMatrix;
-    //printf("The scaled state covariance:\n");
-    //std::cout << scaledStateCovariance << std::endl << std::endl;
+//    printf("The scaled state covariance:\n");
+//    std::cout << scaledStateCovariance << std::endl << std::endl;
     
     Eigen::LLT<Eigen::MatrixXd> lDecomp(scaledStateCovariance);
     Eigen::MatrixXd S = lDecomp.matrixL();
@@ -364,14 +453,22 @@ void ukf::augmentStateCovariance()
 {
     stateCovariance.conservativeResize(stateVector.rows(), stateVector.rows());
     cleanCovariance();
+    
+//    printf("Enlarged state covariance:\n");
+//    std::cout << stateCovariance << std::endl;
+    
     printf("stateCovariance is %d x %d\n", stateCovariance.rows(), stateCovariance.cols());
     printf("processNoiseCovariance is %d x %d\n", processCovariance.rows(), processCovariance.cols());
     //printf("startIndex = %d    numRows = %d\n", unaugmentedStateSize, augmentedStateSize-unaugmentedStateSize);
     //Add Q (i.e.) process noise covariance
     stateCovariance.block(stateSize, stateSize, stateCovariance.rows()-stateSize, stateCovariance.cols()-stateSize) = processCovariance;
     
-    //printf("Augmented and Cleaned State Covariance:\n");
-    //std::cout << stateCovariance << std::endl << std::endl;
+//    printf("Augmented and Cleaned State Covariance:\n");
+//    std::cout << stateCovariance << std::endl << std::endl;
+    
+//    printf("processCovariance:\n");
+//    std::cout << processCovariance << std::endl << std::endl;
+//    printf("\n");
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -392,7 +489,7 @@ void ukf::processUpdate(double deltaT)
     {
         //Remove measurement noise from sigmaPoint;
         //sigmaPoints.at(i).conservativeResize(unaugmentedStateSize+processNoiseSize);
-        processFunction2D(sigmaPoints.at(i), deltaT);
+        processFunction3D(sigmaPoints.at(i), deltaT);
         //printf("------Processed Sigma Point %d ------\n", i);
         //printStateVector(sigmaPoints.at(i));
     }
@@ -438,8 +535,7 @@ void ukf::processUpdate(double deltaT)
     //generateSigmaPoints(aPrioriStateMean, aPrioriStateCovariance);
     
     predictMeasurements();
-    //printf("A Priori Measurement Mean:\n");
-    //std::cout << aPrioriMeasurementsMean << std::endl << std::endl;
+
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -490,7 +586,7 @@ void ukf::processFunction2D(Eigen::VectorXd& sigmaPoint, double deltaT)
     
     for (int i=0; i<numLandmarks; i++)
     {
-        int inverseDepthIndex = getLandmarkIndex2D(i) + 4;
+        int inverseDepthIndex = getLandmarkIndex(i) + 4;
         double inverseDepthNoise = sigmaPoint(stateSize + cameraStateSize + i); // Gets the ith landmark's noise
         //printf("inverseDepthNoise = %.10f\n", inverseDepthNoise);
         sigmaPoint(inverseDepthIndex, 0) = sigmaPoint(inverseDepthIndex, 0) + inverseDepthNoise;
@@ -508,6 +604,72 @@ void ukf::processFunction2D(Eigen::VectorXd& sigmaPoint, double deltaT)
     //std::cout << sigmaPoint << std::endl << std::endl;
 }
 
+void ukf::processFunction3D(Eigen::VectorXd& sigmaPoint, double deltaT)
+{
+    Eigen::Vector3d position;
+    position[0] = sigmaPoint[0];
+    position[1] = sigmaPoint[1];
+    position[2] = sigmaPoint[2];
+    
+    Eigen::Vector3d velocity;
+    velocity[0] = sigmaPoint[3];
+    velocity[1] = sigmaPoint[4];
+    velocity[2] = sigmaPoint[5];
+    
+    Eigen::Vector3d acceleration;
+    acceleration[0] = sigmaPoint[6];
+    acceleration[1] = sigmaPoint[7];
+    acceleration[2] = sigmaPoint[8];
+
+    Eigen::Vector3d positionNoise;
+    positionNoise[0] = sigmaPoint[stateSize];
+    positionNoise[1] = sigmaPoint[stateSize+1];
+    positionNoise[2] = sigmaPoint[stateSize+2];
+    
+    Eigen::Vector3d velocityNoise;
+    velocityNoise[0] = sigmaPoint[stateSize+3];
+    velocityNoise[1] = sigmaPoint[stateSize+4];
+    velocityNoise[2] = sigmaPoint[stateSize+5];
+    
+    Eigen::Vector3d accelerationNoise;
+    accelerationNoise[0] = sigmaPoint[stateSize+6];
+    accelerationNoise[1] = sigmaPoint[stateSize+7];
+    accelerationNoise[2] = sigmaPoint[stateSize+8];
+    
+    //position = position + (velocity * deltaT) + processNoise;
+    acceleration = acceleration + accelerationNoise;
+    velocity = velocity + velocityNoise;
+    position = position + positionNoise;
+    
+    position = position + 
+            (0.5 * acceleration * (deltaT * deltaT)) +
+            (velocity * deltaT);
+    
+    velocity = velocity + acceleration * deltaT;
+     
+    // Put process results back into the sigma point.
+    sigmaPoint[0] = position.x();
+    sigmaPoint[1] = position.y();
+    sigmaPoint[2] = position.z();
+    sigmaPoint[3] = velocity.x();
+    sigmaPoint[4] = velocity.y();
+    sigmaPoint[5] = velocity.z();
+    sigmaPoint[6] = acceleration.x();
+    sigmaPoint[7] = acceleration.y();
+    sigmaPoint[8] = acceleration.z();
+    
+    for (int i=0; i<numLandmarks; i++)
+    {
+        int inverseDepthIndex = getLandmarkIndex(i) + 6;
+        double inverseDepthNoise = sigmaPoint(stateSize + cameraStateSize + i); // Gets the ith landmark's noise
+        //printf("inverseDepthNoise = %.10f\n", inverseDepthNoise);
+        sigmaPoint[inverseDepthIndex] = sigmaPoint[inverseDepthIndex] + inverseDepthNoise;
+    }
+    
+    //printf("Processed Sigma Point\n");
+    //std::cout << sigmaPoint << std::endl << std::endl;
+}
+
 void ukf::predictMeasurements()
 {
     predictedMeasurements.clear();
@@ -515,8 +677,9 @@ void ukf::predictMeasurements()
     for (int i=0; i<sigmaPoints.size(); i++)
     {
         Eigen::VectorXd measurement;
-        //printf("------ Predicting measurement from sigma point %d ------\n", i);
-        bool inFrontofCamera = measureLandmarks2D(sigmaPoints.at(i), measurement);
+        //printf("------ Predicting measurement from sigma point %d / %d ------\n", i, sigmaPoints.size());
+//        bool inFrontofCamera = measureLandmarks2D(sigmaPoints.at(i), measurement);
+        bool inFrontofCamera = measureLandmarks3D(sigmaPoints.at(i), measurement);
         if (inFrontofCamera)
         {
             predictedMeasurements.push_back(measurement);
@@ -533,7 +696,7 @@ void ukf::predictMeasurements()
         //printf("\n");
     }
     
-    aPrioriMeasurementsMean.resize(numLandmarks);
+    aPrioriMeasurementsMean.resize(numLandmarks * 2);
     initializeVector2Zero(aPrioriMeasurementsMean);
     for (int i=0; i<sigmaPoints.size(); i++)
     {
@@ -556,7 +719,7 @@ bool ukf::measureLandmarks2D(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measur
     
     for (int i=0; i<numLandmarks; i++)
     {
-        int index = getLandmarkIndex2D(i);
+        int index = getLandmarkIndex(i);
         
         origin(0,0) = sigmaPoint(index, 0);
         origin(1,0) = sigmaPoint(index + 1, 0);
@@ -587,11 +750,71 @@ bool ukf::measureLandmarks2D(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measur
     return true;
 }
 
+bool ukf::measureLandmarks3D(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measurement)
+{
+    // 2 values per observation of landmark corresponding to 2 dimensional optical sensor
+    measurement.resize(numLandmarks * 2);
+    initializeVector2Zero(measurement);
+    
+    Eigen::Vector3d camPosition;
+    camPosition[0] = sigmaPoint[0];
+    camPosition[1] = sigmaPoint[1];
+    camPosition[2] = sigmaPoint[2];
+    
+    Eigen::Vector3d origin;
+    Eigen::Vector3d direction;
+    double inverseDepth;
+    
+    for (int i=0, j=0; i<numLandmarks; i++, j+=2)
+    {
+        int index = getLandmarkIndex(i);
+        origin[0] = sigmaPoint[index];
+        origin[1] = sigmaPoint[index + 1];
+        origin[2] = sigmaPoint[index + 2];
+        direction[0] = sigmaPoint[index+3];
+        direction[1] = sigmaPoint[index+4];
+        direction[2] = sigmaPoint[index+5];
+        inverseDepth = sigmaPoint[index+6];
+        //printf("------Sigma Point ------\n");
+        //std::cout << sigmaPoint << std::endl << std::endl;
+        
+        Eigen::Vector3d euclideanLandmark = origin + (1.0/inverseDepth) * direction;
+        //printf("Euclidean Landmark %d / %d\n", i, numLandmarks);
+        //std::cout << euclideanLandmark << std::endl;
+        if (euclideanLandmark(0,0) <= 0.0)
+        {
+            //Landmark behind camera
+            return false;
+        }
+        
+        Eigen::Matrix3d rotMat;
+        rotMat = simCamera.direction;
+        
+        Eigen::Vector3d pixel;
+        pixel = rotMat.transpose() * (euclideanLandmark - position()); // Landmark in camera coordinates
+        pixel[0] = pixel.x() / pixel.z();
+        pixel[1] = pixel.y() / pixel.z();
+        pixel[2] = 1.0;
+        pixel = simCamera.intrinsicCalibrationMatrix * pixel; //Projected landmark
+        
+        measurement[j] = pixel.x();
+        measurement[j+1] = pixel.y();
+//        printf("pixel @ %d = (%.20f, %.20f)\n", j, pixel.x(), pixel.y());
+//        print("Measurement:", measurement);
+//        printf("\n");
+    }
+    return true;
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////
 //                           MEASUREMENT UPDATE
 /////////////////////////////////////////////////////////////////////////////////////////////
 void ukf::measurementUpdate(Eigen::VectorXd measurement)
 {
+//    Eigen::VectorXd temp = measurement - aPrioriMeasurementsMean;
+//    print("Measurement residual:", temp);
+//    printf("\n");
+    
     Eigen::VectorXd tmpState(stateVector.rows(), 1);
     Eigen::VectorXd tmpMeasurement(stateVector.rows(), 1);
     
@@ -667,27 +890,16 @@ void ukf::measurementUpdate(Eigen::VectorXd measurement)
 
 void ukf::printStateVector(Eigen::VectorXd vector)
 {
-    printf("Camera Position:     (%f, %f)\n", vector(0,0), vector(1,0));
-    printf("Camera Velocity:     (%f, %f)\n", vector(2,0), vector(3,0));
-    //printf("Camera Acceleration: (%f)\n", vector(2,0));
+    printf("Camera Position:     (%f, %f, %f)\n", vector[0], vector[1], vector[2]);
+    printf("Camera Velocity:     (%f, %f, %f)\n", vector[3], vector[4], vector[5]);
+    printf("Camera Acceleration:     (%f, %f, %f)\n", vector[6], vector[7], vector[8]);    
     
-    
-    std::vector<Eigen::Vector2d, Eigen::aligned_allocator<Eigen::Vector2d> > lms = landmarks();
+    std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> > lms = landmarks();
     for (int i=0; i<numLandmarks; i++)
     {
         printf("--- Landmark %d ---\n", i);
-        printf("(%f, %f)\n", lms.at(i)(0,0), lms.at(i)(1,0));
-       
-        int index = getLandmarkIndex2D(i);
-        printf("Origin:        (%f, %f)\n", vector(index, 0), vector(index+1, 0));
-        printf("Direction:     (%f, %f)\n", vector(index+2, 0), vector(index+3, 0));
-        printf("Depth:         (%f) <----------------------\n", 1.0/vector(index+4, 0));
-        printf("Inverse Depth: (%f)\n", vector(index+4, 0));
-        
+        printf("(%f, %f, %f)\n", lms.at(i)[0], lms.at(i)[1], lms.at(i)[2]);
     }
-    
-    //printf("Acceleration Noise: (%f)\n", vector(vector.rows()-2, 0));
-    //printf("Measurement  Noise: (%f)\n", vector(vector.rows()-1, 0));
     printf("\n");
 }
 
@@ -721,21 +933,23 @@ void ukf::initializeVector2Zero(Eigen::VectorXd& vector)
     }
 }
 
-Eigen::Vector2d ukf::getEuclideanLandmark(int index)
+Eigen::Vector3d ukf::getEuclideanLandmark(int index)
 {
-    int i = getLandmarkIndex2D(index);
+    int i = getLandmarkIndex(index);
     
-    Eigen::Vector2d origin;    
-    Eigen::Vector2d direction;
+    Eigen::Vector3d origin;    
+    Eigen::Vector3d direction;
     double inverseDepth;
     
-    origin(0,0) = stateVector(i, 0);
-    origin(1,0) = stateVector(i+1, 0);
-    direction(0,0) = stateVector(i+2, 0);
-    direction(1,0) = stateVector(i+3, 0);
-    inverseDepth = stateVector(i+4, 0);
+    origin[0] = stateVector[i];
+    origin[1] = stateVector[i+1];
+    origin[2] = stateVector[i+2];
+    direction[0] = stateVector[i+3];
+    direction[1] = stateVector[i+4];
+    direction[2] = stateVector[i+5];
+    inverseDepth = stateVector[i+6];
 
-    Eigen::Vector2d euclideanLandmark = origin + ((1.0/inverseDepth) * direction);
+    Eigen::Vector3d euclideanLandmark = origin + ((1.0/inverseDepth) * direction);
     /*
     printf("Euclidean Landmark %i\n", index);
     printf("Origin\n");

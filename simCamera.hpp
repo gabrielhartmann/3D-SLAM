@@ -32,7 +32,7 @@ public:
     void draw();
     std::vector<Landmark> map;
     
-//private:
+
     double currTime;
     
     Eigen::Vector3d initialVelocity;
@@ -65,7 +65,7 @@ public:
     
     static const double defaultFocalLengthDrawn = 4.0;
     
-private:
+
     double pi;
     
     Eigen::Quaterniond direction;

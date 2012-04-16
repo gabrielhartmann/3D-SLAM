@@ -16,6 +16,7 @@
 #include "Color.hpp"
 #include "landmark.hpp"
 #include "simCamera.hpp"
+#include "Utilities.h"
 
 class ukf
 {
@@ -27,7 +28,7 @@ public:
     void step(double timeStep, Eigen::VectorXd control, Eigen::VectorXd measurement);
     Eigen::Vector3d position();
     void draw();
-    std::vector<Eigen::Vector2d, Eigen::aligned_allocator<Eigen::Vector2d> > landmarks();
+    std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> > landmarks();
     void reset(SimCamera simCamera);
 private:
     int filterStepCount;
@@ -42,8 +43,8 @@ private:
     SimCamera simCamera;
     
     int numLandmarks;
-    const static int cameraStateSize = 6;
-    const static int landmarkSize2D = 5;
+    const static int cameraStateSize = 9;
+    const static int landmarkSize = 7;
     int stateSize;
     
     const static double inverseDepthVariance = 0.0625;
@@ -52,9 +53,11 @@ private:
    
     Eigen::VectorXd stateVector;
     void initializeStateVector2D();
+    void initializeStateVector3D();
        
     Eigen::MatrixXd stateCovariance;
     void initializeStateCovariance2D();
+    void initializeStateCovariance3D();
     
     Eigen::MatrixXd measurementCovariance;
     void initializeMeasurementCovariance();
@@ -62,7 +65,7 @@ private:
     Eigen::MatrixXd processCovariance;
     void initializeProcessCovariance();
     
-    int getLandmarkIndex2D(int i);
+    int getLandmarkIndex(int i);
     
     
     // Sigma point scaling values
@@ -75,7 +78,9 @@ private:
     
     void generateSigmaPoints(Eigen::VectorXd stVector, Eigen::MatrixXd covMatrix);
     std::vector<Eigen::VectorXd, Eigen::aligned_allocator<Eigen::VectorXd> > sigmaPoints;    
-    void processFunction2D(Eigen::VectorXd& sigmaPoint, double deltaT);    
+    
+    void processFunction2D(Eigen::VectorXd& sigmaPoint, double deltaT);
+    void processFunction3D(Eigen::VectorXd& sigmaPoint, double deltaT);
     Eigen::VectorXd getColumn(Eigen::MatrixXd M, int colIndex);
     
     Eigen::VectorXd aPrioriStateMean;
@@ -83,6 +88,7 @@ private:
     
     
     bool measureLandmarks2D(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measurement);
+    bool measureLandmarks3D(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measurement);
     std::vector<Eigen::VectorXd, Eigen::aligned_allocator<Eigen::VectorXd> > predictedMeasurements;
     Eigen::VectorXd aPrioriMeasurementsMean;
     
@@ -95,7 +101,7 @@ private:
     void initializeMatrix2Zero(Eigen::MatrixXd& matrix);
     void initializeVector2Zero(Eigen::VectorXd& vector);
     
-    Eigen::Vector2d getEuclideanLandmark(int index);
+    Eigen::Vector3d getEuclideanLandmark(int index);
     
     void drawCamera();
 };

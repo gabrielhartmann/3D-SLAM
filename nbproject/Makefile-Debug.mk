@@ -38,8 +38,8 @@ OBJECTFILES= \
 	${OBJECTDIR}/main.o \
 	${OBJECTDIR}/Utilities.o \
 	${OBJECTDIR}/io.o \
-	${OBJECTDIR}/Color.o \
 	${OBJECTDIR}/simCamera.o \
+	${OBJECTDIR}/Color.o \
 	${OBJECTDIR}/Trackball.o \
 	${OBJECTDIR}/grid_features.o \
 	${OBJECTDIR}/normalRandom.o \
@@ -93,15 +93,15 @@ ${OBJECTDIR}/io.o: io.cpp
 	${RM} $@.d
 	$(COMPILE.cc) -g -I/usr/include/eigen3 -MMD -MP -MF $@.d -o ${OBJECTDIR}/io.o io.cpp
 
-${OBJECTDIR}/Color.o: Color.cpp 
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} $@.d
-	$(COMPILE.cc) -g -I/usr/include/eigen3 -MMD -MP -MF $@.d -o ${OBJECTDIR}/Color.o Color.cpp
-
 ${OBJECTDIR}/simCamera.o: simCamera.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} $@.d
 	$(COMPILE.cc) -g -I/usr/include/eigen3 -MMD -MP -MF $@.d -o ${OBJECTDIR}/simCamera.o simCamera.cpp
+
+${OBJECTDIR}/Color.o: Color.cpp 
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} $@.d
+	$(COMPILE.cc) -g -I/usr/include/eigen3 -MMD -MP -MF $@.d -o ${OBJECTDIR}/Color.o Color.cpp
 
 ${OBJECTDIR}/Trackball.o: Trackball.cpp 
 	${MKDIR} -p ${OBJECTDIR}
