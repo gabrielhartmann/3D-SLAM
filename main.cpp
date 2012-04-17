@@ -90,6 +90,12 @@ void handleKeyboardEvent(unsigned char key, int x, int y)
             glDisable(GL_CULL_FACE);
             break;
         case ' ':
+            play = false;
+            simCamera.timeStep();
+            filter.step(simCamera.defaultTimeStep, simCamera.measure(simScene));
+            break;
+        case 'p':
+        case 'P':
             play = !play;
             break;
         case 'r':
@@ -107,7 +113,7 @@ void display(void)
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
 //    gluPerspective(33,1,2, scene.zFar);
-    gluPerspective(33,1,2, 1000);
+    gluPerspective(33,1,2, 1000 + eyeZ);
 
     glMatrixMode( GL_MODELVIEW );	// Set the view matrix ...
     glLoadIdentity();			//... to identity.

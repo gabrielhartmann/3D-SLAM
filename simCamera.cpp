@@ -6,6 +6,12 @@ SimCamera::SimCamera(){}
 
 SimCamera::SimCamera(SimScene simScene)
 {
+    this->simScene = simScene;
+    
+    cameraStateSize = 9;
+    numLandmarks = simScene.landmarks.size();
+    landmarkSize = 7;
+    
     pi = 3.1415926535897932384626433832795028841971693993751058;
     
     positionNoiseMean(0,0) = 0.0;
@@ -28,9 +34,9 @@ SimCamera::SimCamera(SimScene simScene)
     accelerationNoiseMean(1,0) = 0.0;
     accelerationNoiseMean(2,0) = 0.0;
     
-    accelerationNoiseVariance(0,0) = 0.1;
-    accelerationNoiseVariance(1,0) = 0.1;
-    accelerationNoiseVariance(2,0) = 0.1;
+    accelerationNoiseVariance(0,0) = 0.001;
+    accelerationNoiseVariance(1,0) = 0.001;
+    accelerationNoiseVariance(2,0) = 0.001;
     
     measurementNoiseMean(0,0) = 0.0;
     measurementNoiseMean(1,0) = 0.0;
@@ -48,12 +54,49 @@ SimCamera::SimCamera(SimScene simScene)
                                                                     0.0, focalLength, 0.0,
                                                                     0.0,                0.0, 1.0;
     
-    double depth = 110.0;
+    
+    double depth = 500.0;
     defaultInverseDepth = 1.0/depth;
-    defaultTimeStep = 0.05;
+    defaultTimeStep = 0.33;
     
     reset();
     initializeMap(simScene);
+}
+
+Eigen::VectorXd SimCamera::getStateVector()
+{
+    Eigen::VectorXd stateVector;
+    stateVector.resize(cameraStateSize + numLandmarks * landmarkSize);
+    clear(stateVector);
+    
+    stateVector[0] = position[0];
+    stateVector[1] = position[1];
+    stateVector[2] = position[2];
+    stateVector[3] = velocity[0] + 0.5;
+    stateVector[4] = velocity[1] + 0.5;
+    stateVector[5] = velocity[2] + 0.5;
+    stateVector[6] = acceleration[0];
+    stateVector[7] = acceleration[1];
+    stateVector[8] = acceleration[2];
+    
+    int mapOffset = cameraStateSize;
+    for (int i=0, j=0; i<numLandmarks; i++, j+=landmarkSize)
+    {
+        Eigen::Vector3d origin = map.at(i).origin;
+        Eigen::Vector3d direction = map.at(i).direction;
+        double inverseDepth = map.at(i).inverseDepth;
+        stateVector[mapOffset + j]        = origin[0];
+        stateVector[mapOffset + j + 1] = origin[1];
+        stateVector[mapOffset + j + 2] = origin[2];
+        stateVector[mapOffset + j + 3] = direction[0];
+        stateVector[mapOffset + j + 4] = direction[1];
+        stateVector[mapOffset + j + 5] = direction[2];
+        //stateVector[mapOffset + j + 6] = inverseDepth + 0.0625;
+        stateVector[mapOffset + j + 6] = inverseDepth + 0.03;
+        
+    }
+    
+    return stateVector;
 }
 
 void SimCamera::initializeMap(SimScene simScene)
@@ -74,21 +117,19 @@ void SimCamera::reset()
 {
     currTime = 0.0;
     
-    initialVelocity(0,0) = -5.0;
-    initialVelocity(1,0) = 30.0;
-    initialVelocity(2,0) = 10.0;
+    initialVelocity(0,0) = 0.0;
+    initialVelocity(1,0) = 0.0;
+    initialVelocity(2,0) = 0.0;
     
     initialPosition(0,0) = -1.0;
-    initialPosition(1,0) = 200.0;
+    initialPosition(1,0) = 300.0;
     initialPosition(2,0) = 0.0;
     
-    position= initialPosition;
-    velocity = initialVelocity;
+    initialAcceleration << 0.0, -1.0, 0.0;
     
-    acceleration(0,0) = 0.0;
-    acceleration(1,0) = -9.81;
-    acceleration(2,0) = 0.0;
-    
+    position = initialPosition;
+    velocity  = initialVelocity;
+    acceleration = initialAcceleration;    
 }
 
 void SimCamera::timeStep()
@@ -111,10 +152,7 @@ void SimCamera::timeStep()
     velocity = velocity + acceleration * defaultTimeStep;
     
     //Reset acceleration -- doesn't appear to matter
-    acceleration(0,0) = 0.0;
-    acceleration(1,0) = -9.81;
-    acceleration(2,0) = 0.0;
-    
+    acceleration = initialAcceleration;
 }
 
 void SimCamera::addNoise2Acceleration()

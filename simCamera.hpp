@@ -13,6 +13,7 @@
 #include "simScene.hpp"
 #include "landmark.hpp"
 #include "normalRandom.hpp"
+#include "Utilities.h"
 #include <stdio.h>
 #include <math.h>
 #include <iostream>
@@ -24,6 +25,9 @@ class SimCamera
 public:
     SimCamera();
     SimCamera(SimScene simScene);
+    
+    SimScene simScene;
+    
     void timeStep();
     Eigen::VectorXd measure(SimScene simScene);
     void reset();
@@ -35,8 +39,9 @@ public:
 
     double currTime;
     
-    Eigen::Vector3d initialVelocity;
     Eigen::Vector3d initialPosition;
+    Eigen::Vector3d initialVelocity;
+    Eigen::Vector3d initialAcceleration;
     
     Eigen::Vector3d position;
     Eigen::Vector3d velocity;
@@ -72,6 +77,12 @@ public:
     Eigen::Matrix3d intrinsicCalibrationMatrix;
     
     double focalLength;
+    
+    Eigen::VectorXd getStateVector();
+    
+    int cameraStateSize;
+    int numLandmarks;
+    int landmarkSize;
 };
 
 #endif	/* SIMCAMERA_HPP */

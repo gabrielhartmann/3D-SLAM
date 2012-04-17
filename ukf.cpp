@@ -171,9 +171,15 @@ void ukf::initializeStateVector3D()
     stateVector[3] = simCamera.velocity[0];
     stateVector[4] = simCamera.velocity[1];
     stateVector[5] = simCamera.velocity[2];
-    stateVector[6] = simCamera.acceleration[0];
-    stateVector[7] = simCamera.acceleration[1];
-    stateVector[8] = simCamera.acceleration[2];
+//    stateVector[3] = 0.0;
+//    stateVector[4] = 0.0;
+//    stateVector[5] = 0.0;
+//    stateVector[6] = simCamera.acceleration[0];
+//    stateVector[7] = simCamera.acceleration[1];
+//    stateVector[8] = simCamera.acceleration[2];
+    stateVector[6] = 0.0;
+    stateVector[7] = 0.0;
+    stateVector[8] = 0.0;
     
     int mapOffset = cameraStateSize;
     for (int i=0, j=0; i<numLandmarks; i++, j+=landmarkSize)
@@ -239,47 +245,84 @@ void ukf::initializeStateCovariance2D()
 
 void ukf::initializeStateCovariance3D()
 {
+//    stateCovariance.resize(stateVector.rows(), stateVector.rows());
+//    initializeMatrix2Zero(stateCovariance);
+//    //Set to diagonal
+//    for (int i=0; i<stateCovariance.rows(); i++)
+//    {
+//        for (int j=0; j<stateCovariance.cols(); j++)
+//        {
+//            if(i == j)
+//            {
+//                // Initial Camera position and velocity unknown
+//                if (i < 6) 
+//                {
+//                    stateCovariance(i,j) = 1.0;
+//                }
+//                
+//                // Acceleration unknown
+//                if (i >= 6 && i < 9)
+//                {
+//                    stateCovariance(i,j) = 1.0;
+//                }
+//                
+//            }
+//        }
+//    }
+//    
+//    //Set landmark variances
+//    for (int i=0; i<numLandmarks; i++)
+//    {
+//        int index = getLandmarkIndex(i);
+//        //Origin
+//        stateCovariance(index, index) = 0.0;
+//        stateCovariance(index + 1, index + 1) = 0.0;
+//        stateCovariance(index + 2, index + 2) = 0.0;
+//        //Direction
+//        stateCovariance(index + 3, index + 3) = 0.0;
+//        stateCovariance(index + 4, index + 4) = 0.0;
+//        stateCovariance(index + 5, index + 5) = 0.0;
+//        //Inverse Depth
+//        stateCovariance(index+6, index+6) = inverseDepthVariance;
+//    }
+    
+//    stateCovariance.resize(stateVector.rows(), stateVector.rows());
+//    clear(stateCovariance);
+//    
+//    for (int row=0; row < stateCovariance.rows(); row++)
+//    {
+//        for (int col=0; col < stateCovariance.cols(); col++)
+//        {
+//            if (row < cameraStateSize && col < cameraStateSize)
+//            {
+//                stateCovariance(row, col) = 1.0;    
+//            }
+//        }
+//    }
+//    
+//    //Set landmark variances
+//    for (int i=0; i<numLandmarks; i++)
+//    {
+//        int index = getLandmarkIndex(i);
+//        //Origin
+//        stateCovariance(index, index)               = 0.0;
+//        stateCovariance(index + 1, index + 1) = 0.0;
+//        stateCovariance(index + 2, index + 2) = 0.0;
+//        //Direction
+//        stateCovariance(index + 3, index + 3) = 0.0;
+//        stateCovariance(index + 4, index + 4) = 0.0;
+//        stateCovariance(index + 5, index + 5) = 0.0;
+//        //Inverse Depth
+//        stateCovariance(index+6, index+6) = inverseDepthVariance;
+//    }
+    
     stateCovariance.resize(stateVector.rows(), stateVector.rows());
+    clear(stateCovariance);
+    Eigen::VectorXd tmpDiff;
+    tmpDiff = simCamera.getStateVector() - stateVector;
+    stateCovariance = tmpDiff * tmpDiff.transpose();
     
-    //Set to diagonal
-    for (int i=0; i<stateCovariance.rows(); i++)
-    {
-        for (int j=0; j<stateCovariance.cols(); j++)
-        {
-            if(i == j)
-            {
-                if (i >= 0 && i < cameraStateSize) //Initial Camera position, velocity and acceleration perfectly known
-                {
-                    stateCovariance(i,j) = 0.0;
-                }
-                else
-                {
-                    stateCovariance(i,j) = 0.01;
-                }
-                
-            }
-            else
-            {
-                stateCovariance(i,j) = 0.0; 
-            }
-        }
-    }
-    
-    //Set landmark variances
-    for (int i=0; i<numLandmarks; i++)
-    {
-        int index = getLandmarkIndex(i);
-        //Origin
-        stateCovariance(index, index) = 0.0;
-        stateCovariance(index + 1, index + 1) = 0.0;
-        stateCovariance(index + 2, index + 2) = 0.0;
-        //Direction
-        stateCovariance(index + 3, index + 3) = 0.0;
-        stateCovariance(index + 4, index + 4) = 0.0;
-        stateCovariance(index + 5, index + 5) = 0.0;
-        //Inverse Depth
-        stateCovariance(index+6, index+6) = inverseDepthVariance;
-    }
+    print("State Covariance:", stateCovariance);
 }
 
 void ukf::initializeMeasurementCovariance()
@@ -296,28 +339,6 @@ void ukf::initializeMeasurementCovariance()
 
 void ukf::initializeProcessCovariance()
 {
-    /*
-    processCovariance.resize(unaugmentedStateSize, unaugmentedStateSize);
-    initializeMatrix2Zero(processCovariance);
-    processCovariance(0,0) = 0.001; //Horizontal position
-    processCovariance(1,0) = 0.001; //Vertical position ???
-    processCovariance(2,0) = 0.001; //Horizontal velocity ??? SHOULDN'T THESE BE ALONG THE DIAGONAL?
-    processCovariance(3,0) = 0.001; //Vertical velocity ???
-    
-    //Set landmark variances
-    for (int i=0; i<numLandmarks; i++)
-    {
-        int index = getLandmarkIndex2D(i);
-        //Origin
-        processCovariance(index, index) = 0.00;
-        processCovariance(index + 1, index + 1) = 0.00;
-        //Direction
-        processCovariance(index + 2, index + 2) = 0.00;
-        processCovariance(index + 3, index + 3) = 0.00;
-        //Inverse Depth
-        processCovariance(index+4, index+4) = inverseDepthVariance;
-    }
-    */
     
     processCovariance.resize(cameraStateSize + numLandmarks, cameraStateSize + numLandmarks); //landmarks only vary by inverse depth so only one entry per landmark
     initializeMatrix2Zero(processCovariance);
@@ -329,7 +350,7 @@ void ukf::initializeProcessCovariance()
     processCovariance(5,5) = simCamera.velocityNoiseVariance(2,0);     //Depth velocity
     processCovariance(6,6) = simCamera.accelerationNoiseVariance(0,0); //Horizontal acceleration
     processCovariance(7,7) = simCamera.accelerationNoiseVariance(1,0); //Vertical acceleration
-    processCovariance(8,8) = simCamera.accelerationNoiseVariance(2,0); //Depthl acceleration
+    processCovariance(8,8) = simCamera.accelerationNoiseVariance(2,0); //Depth acceleration
     
     for (int i=cameraStateSize; i<processCovariance.rows(); i++)
     {
@@ -802,9 +823,11 @@ bool ukf::measureLandmarks3D(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measur
 /////////////////////////////////////////////////////////////////////////////////////////////
 void ukf::measurementUpdate(Eigen::VectorXd measurement)
 {
-//    Eigen::VectorXd temp = measurement - aPrioriMeasurementsMean;
-//    print("Measurement residual:", temp);
-//    printf("\n");
+//    print("Actual Measurement:", measurement);
+//    print("Predicted Measurement:", aPrioriMeasurementsMean);
+//    Eigen::VectorXd tmpDiff;
+//    tmpDiff = measurement - aPrioriMeasurementsMean;
+//    print("Difference:", tmpDiff);
     
     Eigen::VectorXd tmpState(stateVector.rows(), 1);
     Eigen::VectorXd tmpMeasurement(stateVector.rows(), 1);
@@ -821,8 +844,6 @@ void ukf::measurementUpdate(Eigen::VectorXd measurement)
         
         Pxz = Pxz + covarianceWeight(i) * (tmpState * tmpMeasurement.transpose());
     }
-//    std::cout << "Pxz" << std::endl;
-//    std::cout << Pxz << std::endl << std::endl;
     
     Pzz.resize(aPrioriMeasurementsMean.rows(), aPrioriMeasurementsMean.rows());
     initializeMatrix2Zero(Pzz);
@@ -834,48 +855,19 @@ void ukf::measurementUpdate(Eigen::VectorXd measurement)
     }
     
     // Keep in both pure additive and mixture model
-    Pzz = Pzz + measurementCovariance;
-    
-//    std::cout << "Pzz" << std::endl;
-//    std::cout << Pzz << std::endl << std::endl;
-//    
-//  
-//    std::cout << "Pzz^-1" << std::endl;
-//    std::cout << Pzz.inverse() << std::endl << std::endl;
-//    
-//    std::cout << "Identity?" << std::endl;
-//    std::cout << Pzz * Pzz.inverse() << std::endl << std::endl;
-    
+    Pzz = Pzz + measurementCovariance;    
     
     K.resize(stateVector.rows(), aPrioriMeasurementsMean.rows());
     K = Pxz * Pzz.inverse();
     
-//    std::cout << "Measurement:" << std::endl;
-//    std::cout << measurement << std::endl << std::endl;
-//    
-//    printf("aPrioriMeasurementsMean:\n");
-//    std::cout << aPrioriMeasurementsMean << std::endl << std::endl;
-//    
-//    printf("measurement - aPrioriMeasurementsMean\n");
-//    std::cout << measurement-aPrioriMeasurementsMean << std::endl << std::endl;
-//    
-//    std::cout << "Kalman Gain:" << std::endl;
-//    std::cout << K << std::endl << std::endl;
-//    
-//    printf("Kalman Gain applied to measurement\n");
-//    std::cout << K * (measurement - aPrioriMeasurementsMean) << std::endl << std::endl;
-//    
-//    printf("aPrioriStateMean:\n");
-//    std::cout << aPrioriStateMean << std::endl <<std::endl;
+    //print("Kalman Gain:", K);
     
     stateVector = aPrioriStateMean + K * (measurement - aPrioriMeasurementsMean);
 //    printf("New Position: (%.20f, %.20f %.20f)\n", stateVector[0], stateVector[1], stateVector[2]);
 //    printf("\n");
     
     stateCovariance = aPrioriStateCovariance - (K * Pzz * K.transpose());
-    
-//    printf("A Posteriori State covariance: %d X %d\n", aPrioriStateCovariance.rows(), aPrioriStateCovariance.cols());
-//    std::cout << stateCovariance << std::endl;
+    //print("Filtered State Covariance:", stateCovariance);
 }
 
 void ukf::printStateVector(Eigen::VectorXd vector)
