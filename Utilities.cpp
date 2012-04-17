@@ -228,3 +228,22 @@ void print(string s, Eigen::MatrixXd matrix)
     std::cout << s << " " << matrix.rows() << " x " << matrix.cols() << std::endl;
     std::cout << matrix << std::endl;
 }
+
+void clear(Eigen::VectorXd& vec)
+{
+    for (int row=0; row < vec.rows(); row++)
+    {
+        vec[row] = 0.0;
+    }
+}
+
+void clear(Eigen::MatrixXd& mat)
+{
+    for (int row = 0; row < mat.rows(); row++)
+    {
+        for (int col = 0; col < mat.cols(); col++)
+        {
+            mat(row, col) = 0.0;
+        }
+    }
+}
