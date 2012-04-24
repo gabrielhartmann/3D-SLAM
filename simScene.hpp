@@ -22,7 +22,7 @@ public:
     void draw();
 private:
     static const double cubeWidth = 2.0;
-    static const int axesLength = 100;
+    static const int axesLength = 150;
     void drawAxes();
     void drawLandmarks();
 };

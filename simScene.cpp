@@ -25,14 +25,78 @@ SimScene::SimScene()
 //    landmarks.push_back(Eigen::Vector3d (70.0, 10.0, 0.0));
 //    landmarks.push_back(Eigen::Vector3d (60.0, 10.0, 0.0));
 //    landmarks.push_back(Eigen::Vector3d (50.0, 10.0, 0.0));
+
+    // 3D Example
+//    landmarks.push_back(Eigen::Vector3d (100.0, 0.0, -100.0));
+//    landmarks.push_back(Eigen::Vector3d (100.0, 150.0, 0.0));
+//    landmarks.push_back(Eigen::Vector3d (100.0, 0.0, 100.0));
+//    
+//    landmarks.push_back(Eigen::Vector3d (100.0, 100.0, -100.0));
+//    landmarks.push_back(Eigen::Vector3d (100.0, 50.0, 0.0));
+//    landmarks.push_back(Eigen::Vector3d (100.0, 100.0, 100.0));
     
-    landmarks.push_back(Eigen::Vector3d (100.0, 0.0, -100.0));
-    landmarks.push_back(Eigen::Vector3d (100.0, 150.0, 0.0));
-    landmarks.push_back(Eigen::Vector3d (100.0, 0.0, 100.0));
+    //landmarks.push_back(Eigen::Vector3d (100.0, 0.0, 100.0));
     
-    landmarks.push_back(Eigen::Vector3d (100.0, 100.0, -100.0));
-    landmarks.push_back(Eigen::Vector3d (100.0, 50.0, 0.0));
-    landmarks.push_back(Eigen::Vector3d (100.0, 100.0, 100.0));
+//    // Board
+    int height = 7;
+    int width =7;
+    double space = 10;
+    Eigen::Vector3d origin;
+    origin << 200.0, -30.0, -30.0;
+    
+    for (int row = 0; row < height; row++)
+    {
+        for (int col = 0; col < width; col++)
+        {
+            landmarks.push_back(Eigen::Vector3d(origin.x(), col * space + origin.y(), row * space + origin.z()));
+        }
+    }
+    
+//    height = 2;
+//    width =2;    
+//    origin << 300.0, 50.0, -50.0;
+//    for (int row = 0; row < height; row++)
+//    {
+//        for (int col = 0; col < width; col++)
+//        {
+//            landmarks.push_back(Eigen::Vector3d(origin.x(), col * space + origin.y(), row * space + origin.z()));
+//        }
+//    }
+//    
+//    height = 2;
+//    width =2;    
+//    origin << 400.0, 50.0, 50.0;
+//    for (int row = 0; row < height; row++)
+//    {
+//        for (int col = 0; col < width; col++)
+//        {
+//            landmarks.push_back(Eigen::Vector3d(origin.x(), col * space + origin.y(), row * space + origin.z()));
+//        }
+//    }
+//    
+//    height = 2;
+//    width =2;    
+//    origin << 500.0, -50.0, 50.0;
+//    for (int row = 0; row < height; row++)
+//    {
+//        for (int col = 0; col < width; col++)
+//        {
+//            landmarks.push_back(Eigen::Vector3d(origin.x(), col * space + origin.y(), row * space + origin.z()));
+//        }
+//    }
+//    
+//    height = 2;
+//    width =2;    
+//    origin << 600.0, 5.0, 0.0;
+//    for (int row = 0; row < height; row++)
+//    {
+//        for (int col = 0; col < width; col++)
+//        {
+//            landmarks.push_back(Eigen::Vector3d(origin.x(), col * space + origin.y(), row * space + origin.z()));
+//        }
+//    }
+//    
+    
 }
 
 void SimScene::draw()

@@ -35,10 +35,10 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 # Object Files
 OBJECTFILES= \
 	${OBJECTDIR}/ukf.o \
+	${OBJECTDIR}/Device.o \
 	${OBJECTDIR}/main.o \
 	${OBJECTDIR}/Utilities.o \
 	${OBJECTDIR}/io.o \
-	${OBJECTDIR}/simCamera.o \
 	${OBJECTDIR}/Color.o \
 	${OBJECTDIR}/Trackball.o \
 	${OBJECTDIR}/grid_features.o \
@@ -78,6 +78,11 @@ ${OBJECTDIR}/ukf.o: ukf.cpp
 	${RM} $@.d
 	$(COMPILE.cc) -g -I/usr/include/eigen3 -MMD -MP -MF $@.d -o ${OBJECTDIR}/ukf.o ukf.cpp
 
+${OBJECTDIR}/Device.o: Device.cpp 
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} $@.d
+	$(COMPILE.cc) -g -I/usr/include/eigen3 -MMD -MP -MF $@.d -o ${OBJECTDIR}/Device.o Device.cpp
+
 ${OBJECTDIR}/main.o: main.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} $@.d
@@ -92,11 +97,6 @@ ${OBJECTDIR}/io.o: io.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} $@.d
 	$(COMPILE.cc) -g -I/usr/include/eigen3 -MMD -MP -MF $@.d -o ${OBJECTDIR}/io.o io.cpp
-
-${OBJECTDIR}/simCamera.o: simCamera.cpp 
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} $@.d
-	$(COMPILE.cc) -g -I/usr/include/eigen3 -MMD -MP -MF $@.d -o ${OBJECTDIR}/simCamera.o simCamera.cpp
 
 ${OBJECTDIR}/Color.o: Color.cpp 
 	${MKDIR} -p ${OBJECTDIR}
