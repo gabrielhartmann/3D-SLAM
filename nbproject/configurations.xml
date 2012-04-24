@@ -5,6 +5,7 @@
                    displayName="Header Files"
                    projectFiles="true">
       <itemPath>Color.hpp</itemPath>
+      <itemPath>Device.hpp</itemPath>
       <itemPath>Geometry.h</itemPath>
       <itemPath>Lighting.h</itemPath>
       <itemPath>Trackball.h</itemPath>
@@ -12,7 +13,6 @@
       <itemPath>grid_features.hpp</itemPath>
       <itemPath>io.hpp</itemPath>
       <itemPath>landmark.hpp</itemPath>
-      <itemPath>simCamera.hpp</itemPath>
       <itemPath>simScene.hpp</itemPath>
       <itemPath>ukf.hpp</itemPath>
     </logicalFolder>
@@ -542,6 +542,7 @@
                    displayName="Source Files"
                    projectFiles="true">
       <itemPath>Color.cpp</itemPath>
+      <itemPath>Device.cpp</itemPath>
       <itemPath>Geometry.cpp</itemPath>
       <itemPath>Lighting.cpp</itemPath>
       <itemPath>Trackball.cpp</itemPath>
@@ -552,7 +553,6 @@
       <itemPath>main.cpp</itemPath>
       <itemPath>normalRandom.cpp</itemPath>
       <itemPath>normalRandom.hpp</itemPath>
-      <itemPath>simCamera.cpp</itemPath>
       <itemPath>simScene.cpp</itemPath>
       <itemPath>ukf.cpp</itemPath>
     </logicalFolder>

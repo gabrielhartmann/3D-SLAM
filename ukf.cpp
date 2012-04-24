@@ -1,60 +1,57 @@
 #include "ukf.hpp"
-#include <iostream>
-#include <stdio.h>
-#include <eigen3/Eigen/Eigenvalues>
 
-ukf::ukf(){}
 
-ukf::ukf(SimCamera simCamera)
+UKF::UKF(){}
+
+UKF::UKF(Device simCamera, SimScene scene)
 {
     
     this->simCamera = simCamera;
-    numLandmarks = simCamera.map.size();
-
+    this->scene = scene;
+    numLandmarks = scene.landmarks.size();
+    
     initialize();
-    
-    
 }
 
-void ukf::initialize()
+void UKF::initialize()
 {
     filterStepCount = 0;
-    stateSize = cameraStateSize + numLandmarks * landmarkSize;
+    stateSize = deviceStateSize + numLandmarks * landmarkSize;
     
-    //initializeStateVector2D();
-    initializeStateVector3D();
-    //initializeStateCovariance2D();
-    initializeStateCovariance3D();
-    initializeProcessCovariance();
-    initializeMeasurementCovariance();
-    
-    //Initialize sigma point scaling factor
     alpha = 0.001;
     beta = 2.0;
-    N = stateSize + processCovariance.rows();
-    lambda = (alpha * alpha) * (N + beta) - N;
+
+    initializeStateAndCovariance();    
+    initializeProcessCovariance();
+    initializeMeasurementCovariance();
 }
 
-void ukf::step(double timeStep, Eigen::VectorXd measurement)
+void UKF::step(double timeStep, Eigen::VectorXd measurement)
 {
     printf("======================================================================\n");
     printf("                                %d                                    \n", ++filterStepCount);
     printf("======================================================================\n");
     processUpdate(timeStep);
     measurementUpdate(measurement);
-    printf("Position = (%f, %f, %f)\n", stateVector[0], stateVector[1], stateVector[2]);
-    //printStateVector(stateVector);
-    //printf("======================================================================\n");
-    //printf("                                %d                                    \n", filterStepCount);
-    //printf("======================================================================\n");
-}
-
-void ukf::step(double timeStep, Eigen::VectorXd control, Eigen::VectorXd measurement)
-{
     
+    
+    //print("State:", stateVector);
+    //print("Covariance:", stateCovariance);
 }
 
-Eigen::Vector3d ukf::position()
+void UKF::step(double timeStep, Eigen::Vector3d control, Eigen::VectorXd measurement)
+{
+    printf("======================================================================\n");
+    printf("                                %d                                    \n", ++filterStepCount);
+    printf("======================================================================\n");  
+    
+    processUpdate(timeStep, control);    
+    measurementUpdate(measurement);
+    //print("State:", stateVector);
+    //print("Covariance:", stateCovariance);
+}
+
+Eigen::Vector3d UKF::position()
 {
     //Eigen::Vector3d pos(stateVector(0,0), stateVector(1,0), 0.0);
     Eigen::Vector3d pos(stateVector[0], stateVector[1], stateVector[2]);
@@ -62,7 +59,7 @@ Eigen::Vector3d ukf::position()
     return pos;
 }
 
-void ukf::draw()
+void UKF::draw()
 {
     drawCamera();
     
@@ -77,7 +74,7 @@ void ukf::draw()
     }
 }
 
-void ukf::drawCamera()
+void UKF::drawCamera()
 {
     glPushMatrix();
     
@@ -112,7 +109,7 @@ void ukf::drawCamera()
     glPopMatrix();
 }
 
-std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> > ukf::landmarks()
+std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> > UKF::landmarks()
 {
     std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> > lms;
     for (int i=0, j=0; i<numLandmarks; i++, j+=landmarkSize)
@@ -123,7 +120,7 @@ std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> > ukf::la
     return lms;
 }
 
-void ukf::reset(SimCamera simCamera)
+void UKF::reset(Device simCamera)
 {
     this->simCamera = simCamera;
     numLandmarks = simCamera.map.size();
@@ -131,236 +128,104 @@ void ukf::reset(SimCamera simCamera)
     initialize();
 }
 
-void ukf::initializeStateVector2D()
-{
-    stateVector.resize(cameraStateSize + numLandmarks * landmarkSize);
-    initializeVector2Zero(stateVector);
-    
-    stateVector(0,0) = simCamera.getPosition()(0,0);
-    stateVector(1,0) = simCamera.getPosition()(1,0);
-    stateVector(2,0) = simCamera.velocity(0,0);
-    stateVector(3,0) = simCamera.velocity(1,0);
-    stateVector(4,0) = simCamera.acceleration(0,0);
-    stateVector(5,0) = simCamera.acceleration(1,0);
-    
-    int mapOffset = cameraStateSize;
-    for (int i=0, j=0; i<numLandmarks; i++, j+=landmarkSize)
-    {
-        Eigen::Vector3d origin = simCamera.map.at(i).origin;
-        Eigen::Vector3d direction = simCamera.map.at(i).direction;
-        double inverseDepth = simCamera.map.at(i).inverseDepth;
-        stateVector(mapOffset + j    , 0) = origin(0,0);
-        stateVector(mapOffset + j + 1, 0) = origin(1,0);
-        stateVector(mapOffset + j + 2, 0) = direction(0,0);
-        stateVector(mapOffset + j + 3, 0) = direction(1,0);
-        stateVector(mapOffset + j + 4, 0) = inverseDepth;
-    }
-    
-    printf("State Vector Initialized:\n");
-    printStateVector(stateVector);
-}
 
-void ukf::initializeStateVector3D()
-{
-    stateVector.resize(cameraStateSize + numLandmarks * landmarkSize);
-    initializeVector2Zero(stateVector);
-    
-    stateVector[0] = simCamera.getPosition()[0];
-    stateVector[1] = simCamera.getPosition()[1];
-    stateVector[2] = simCamera.getPosition()[2];
-    stateVector[3] = simCamera.velocity[0];
-    stateVector[4] = simCamera.velocity[1];
-    stateVector[5] = simCamera.velocity[2];
-//    stateVector[3] = 0.0;
-//    stateVector[4] = 0.0;
-//    stateVector[5] = 0.0;
-//    stateVector[6] = simCamera.acceleration[0];
-//    stateVector[7] = simCamera.acceleration[1];
-//    stateVector[8] = simCamera.acceleration[2];
-    stateVector[6] = 0.0;
-    stateVector[7] = 0.0;
-    stateVector[8] = 0.0;
-    
-    int mapOffset = cameraStateSize;
-    for (int i=0, j=0; i<numLandmarks; i++, j+=landmarkSize)
-    {
-        Eigen::Vector3d origin = simCamera.map.at(i).origin;
-        Eigen::Vector3d direction = simCamera.map.at(i).direction;
-        double inverseDepth = simCamera.map.at(i).inverseDepth;
-        stateVector[mapOffset + j]        = origin[0];
-        stateVector[mapOffset + j + 1] = origin[1];
-        stateVector[mapOffset + j + 2] = origin[2];
-        stateVector[mapOffset + j + 3] = direction[0];
-        stateVector[mapOffset + j + 4] = direction[1];
-        stateVector[mapOffset + j + 5] = direction[2];
-        stateVector[mapOffset + j + 6] = inverseDepth;
-    }
-    
-    printf("State Vector Initialized:\n");
-    printStateVector(stateVector);
-}
-
-void ukf::initializeStateCovariance2D()
-{
-    stateCovariance.resize(stateVector.rows(), stateVector.rows());
-    
-    //Set to diagonal
-    for (int i=0; i<stateCovariance.rows(); i++)
-    {
-        for (int j=0; j<stateCovariance.cols(); j++)
-        {
-            if(i == j)
-            {
-                if (i==0 || i==1 || i==2 || i==3 || i==4 || i==5) //Initial Camera position, velocity and acceleration perfectly known
-                {
-                    stateCovariance(i,j) = 0.0;
-                }
-                else
-                {
-                    stateCovariance(i,j) = 0.01;
-                }
-                
-            }
-            else
-            {
-                stateCovariance(i,j) = 0.0; 
-            }
-        }
-    }
-    
-    //Set landmark variances
-    for (int i=0; i<numLandmarks; i++)
-    {
-        int index = getLandmarkIndex(i);
-        //Origin
-        stateCovariance(index, index) = 0.0;
-        stateCovariance(index + 1, index + 1) = 0.0;
-        //Direction
-        stateCovariance(index + 2, index + 2) = 0.0;
-        stateCovariance(index + 3, index + 3) = 0.0;
-        //Inverse Depth
-        stateCovariance(index+4, index+4) = inverseDepthVariance;
-    }
-}
-
-void ukf::initializeStateCovariance3D()
-{
-//    stateCovariance.resize(stateVector.rows(), stateVector.rows());
-//    initializeMatrix2Zero(stateCovariance);
-//    //Set to diagonal
-//    for (int i=0; i<stateCovariance.rows(); i++)
-//    {
-//        for (int j=0; j<stateCovariance.cols(); j++)
-//        {
-//            if(i == j)
-//            {
-//                // Initial Camera position and velocity unknown
-//                if (i < 6) 
-//                {
-//                    stateCovariance(i,j) = 1.0;
-//                }
-//                
-//                // Acceleration unknown
-//                if (i >= 6 && i < 9)
-//                {
-//                    stateCovariance(i,j) = 1.0;
-//                }
-//                
-//            }
-//        }
-//    }
-//    
-//    //Set landmark variances
-//    for (int i=0; i<numLandmarks; i++)
-//    {
-//        int index = getLandmarkIndex(i);
-//        //Origin
-//        stateCovariance(index, index) = 0.0;
-//        stateCovariance(index + 1, index + 1) = 0.0;
-//        stateCovariance(index + 2, index + 2) = 0.0;
-//        //Direction
-//        stateCovariance(index + 3, index + 3) = 0.0;
-//        stateCovariance(index + 4, index + 4) = 0.0;
-//        stateCovariance(index + 5, index + 5) = 0.0;
-//        //Inverse Depth
-//        stateCovariance(index+6, index+6) = inverseDepthVariance;
-//    }
-    
-//    stateCovariance.resize(stateVector.rows(), stateVector.rows());
-//    clear(stateCovariance);
-//    
-//    for (int row=0; row < stateCovariance.rows(); row++)
-//    {
-//        for (int col=0; col < stateCovariance.cols(); col++)
-//        {
-//            if (row < cameraStateSize && col < cameraStateSize)
-//            {
-//                stateCovariance(row, col) = 1.0;    
-//            }
-//        }
-//    }
-//    
-//    //Set landmark variances
-//    for (int i=0; i<numLandmarks; i++)
-//    {
-//        int index = getLandmarkIndex(i);
-//        //Origin
-//        stateCovariance(index, index)               = 0.0;
-//        stateCovariance(index + 1, index + 1) = 0.0;
-//        stateCovariance(index + 2, index + 2) = 0.0;
-//        //Direction
-//        stateCovariance(index + 3, index + 3) = 0.0;
-//        stateCovariance(index + 4, index + 4) = 0.0;
-//        stateCovariance(index + 5, index + 5) = 0.0;
-//        //Inverse Depth
-//        stateCovariance(index+6, index+6) = inverseDepthVariance;
-//    }
-    
-    stateCovariance.resize(stateVector.rows(), stateVector.rows());
-    clear(stateCovariance);
-    Eigen::VectorXd tmpDiff;
-    tmpDiff = simCamera.getStateVector() - stateVector;
-    stateCovariance = tmpDiff * tmpDiff.transpose();
-    
-    print("State Covariance:", stateCovariance);
-}
-
-void ukf::initializeMeasurementCovariance()
+void UKF::initializeMeasurementCovariance()
 {
     measurementCovariance.resize(numLandmarks * 2, numLandmarks * 2);
-    initializeMatrix2Zero(measurementCovariance);
+    clear(measurementCovariance);
     
     for (int row=0; row<measurementCovariance.rows(); row+=2)
     {
         measurementCovariance(row, row) = simCamera.measurementNoiseVariance[1]; // Y
         measurementCovariance(row+1, row+1) = simCamera.measurementNoiseVariance[2]; // Z
     }
+    
+    print("Measurement covariance:", measurementCovariance);
 }
 
-void ukf::initializeProcessCovariance()
+void UKF::initializeStateAndCovariance()
+{    
+    Eigen::VectorXd state;
+    state.resize(deviceStateSize);
+    clear(state);
+    state.segment(0, 3) = simCamera.getPosition();
+    state.segment(3, 3) = simCamera.getVelocity();
+          
+    Eigen::MatrixXd covariance;
+    covariance.resize(state.rows(), state.rows());
+    clear(covariance);
+    covariance(0,0) = 0.01;
+    covariance(1,1) = 0.01;
+    covariance(2,2) = 0.01;
+    covariance(3,3) = simCamera.accelerationNoiseVariance[0];
+    covariance(4,4) = simCamera.accelerationNoiseVariance[1];
+    covariance(5,5) = simCamera.accelerationNoiseVariance[2];
+//    identity(covariance);
+//    covariance = 0.01 * covariance;
+    
+    for (int i=0; i<numLandmarks; i++)
+    {
+        Eigen::Vector3d position;
+        position << state[0], state[1], state[2];
+        
+        Eigen::Matrix3d rotMat;
+        rotMat = simCamera.direction;
+        
+        Eigen::Vector3d pixel;
+        pixel = rotMat.transpose() * (scene.landmarks[i] - position); // Landmark in camera coordinates
+        pixel[0] = pixel.x() / pixel.z();
+        pixel[1] = pixel.y() / pixel.z();
+        pixel[2] = 1.0;
+        pixel = simCamera.intrinsicCalibrationMatrix * pixel; //Projected landmark
+        
+        state.conservativeResize(state.rows() + 4);
+        state[state.rows()-4] = pixel.x();
+        state[state.rows()-3] = pixel.y();
+        state[state.rows()-2] = simCamera.defaultFocalLength;
+        state[state.rows()-1] = 1.0 / defaultDepth;
+        
+        Eigen::MatrixXd tmpCovariance;
+        tmpCovariance.resize(covariance.rows() + 4, covariance.rows() + 4);
+        clear(tmpCovariance);
+        tmpCovariance.block(0,0, covariance.rows(), covariance.cols()) = covariance;
+        covariance.resize(covariance.rows() + 4, covariance.rows() + 4);
+        covariance = tmpCovariance;
+        covariance(covariance.rows()-4, covariance.rows()-4) = simCamera.measurementNoiseVariance.x();
+        covariance(covariance.rows()-3, covariance.rows()-3) = simCamera.measurementNoiseVariance.y();
+        covariance(covariance.rows()-2, covariance.rows()-2) = simCamera.measurementNoiseVariance.x(); //Actually focal length variance... but whatever
+        covariance(covariance.rows()-1, covariance.rows()-1) = inverseDepthVariance;
+    }
+    unscentedTransform(state, covariance, &UKF::addLandmark);
+    
+    stateVector.resize(state.rows());
+    stateVector = state;
+    
+    stateCovariance.resize(covariance.rows(), covariance.cols());
+    stateCovariance = covariance;
+    
+    print("State:", stateVector);
+    print("Covariance:", stateCovariance);
+}
+
+void UKF::initializeProcessCovariance()
 {
     
-    processCovariance.resize(cameraStateSize + numLandmarks, cameraStateSize + numLandmarks); //landmarks only vary by inverse depth so only one entry per landmark
-    initializeMatrix2Zero(processCovariance);
-    processCovariance(0,0) = simCamera.positionNoiseVariance(0,0);     //Horizontal position
-    processCovariance(1,1) = simCamera.positionNoiseVariance(1,0);     //Vertical position 
-    processCovariance(2,2) = simCamera.positionNoiseVariance(2,0);     //Depth position 
-    processCovariance(3,3) = simCamera.velocityNoiseVariance(0,0);     //Horizontal velocity
-    processCovariance(4,4) = simCamera.velocityNoiseVariance(1,0);     //Vertical velocity
-    processCovariance(5,5) = simCamera.velocityNoiseVariance(2,0);     //Depth velocity
-    processCovariance(6,6) = simCamera.accelerationNoiseVariance(0,0); //Horizontal acceleration
-    processCovariance(7,7) = simCamera.accelerationNoiseVariance(1,0); //Vertical acceleration
-    processCovariance(8,8) = simCamera.accelerationNoiseVariance(2,0); //Depth acceleration
+//    processCovariance.resize(3 + numLandmarks, 3 + numLandmarks);
+    processCovariance.resize(3, 3);
+    clear(processCovariance);
+    processCovariance(0,0) = simCamera.accelerationNoiseVariance[0];
+    processCovariance(1,1) = simCamera.accelerationNoiseVariance[1];
+    processCovariance(2,2) = simCamera.accelerationNoiseVariance[2];
     
-    for (int i=cameraStateSize; i<processCovariance.rows(); i++)
-    {
-        processCovariance(i,i) = inverseDepthVariance;
-    }
+//    for (int i=3; i<processCovariance.rows(); i++)
+//    {
+//        processCovariance(i,i) = inverseDepthVariance;
+//    }
     
     print("Process Covariance:", processCovariance);
 }
 
-int ukf::getLandmarkIndex(int i)
+int UKF::getLandmarkIndex(int i)
 {
     if (i > numLandmarks)
     {
@@ -368,10 +233,10 @@ int ukf::getLandmarkIndex(int i)
         return -1;
     }
     
-    return cameraStateSize + (i * landmarkSize);
+    return deviceStateSize + (i * landmarkSize);
 }
 
-Eigen::VectorXd ukf::getColumn(Eigen::MatrixXd M, int colIndex)
+Eigen::VectorXd UKF::getColumn(Eigen::MatrixXd M, int colIndex)
 {
     Eigen::VectorXd column(M.rows());
     
@@ -384,52 +249,56 @@ Eigen::VectorXd ukf::getColumn(Eigen::MatrixXd M, int colIndex)
     return column;
 }
 
-double ukf::meanWeight(int index)
+double UKF::meanWeight(int index, double degree)
+{
+    double lam = (alpha * alpha) * (degree + beta) - degree;
+    
+    if (index == 0)
+    {
+        return lam / (lam + degree);
+    }
+  
+    return 1.0 / (2.0*(lam + degree));
+}
+
+double UKF::covarianceWeight(int index, double degree)
 {
     if (index == 0)
     {
-        return lambda / (lambda + N);
+        return meanWeight(0, degree) + (1.0 - (alpha * alpha) + beta);
     }
     
-    return 1 / (2*(lambda + N));
+    return meanWeight(index, degree);
 }
 
-double ukf::covarianceWeight(int index)
+void UKF::generateSigmaPoints(Eigen::VectorXd stVector, Eigen::MatrixXd covMatrix, std::vector<Eigen::VectorXd, Eigen::aligned_allocator<Eigen::VectorXd> >& sigPoints)
 {
-    if (index == 0)
-    {
-        return meanWeight(0) + (1 - (alpha * alpha) + beta);
-    }
-    
-    return meanWeight(index);
-}
-
-void ukf::generateSigmaPoints(Eigen::VectorXd stVector, Eigen::MatrixXd covMatrix)
-{
-    sigmaPoints.clear();
+    sigPoints.clear();
+    double N = stVector.rows();
+    double lambda = (alpha * alpha) * (N + beta) - N;
     
     // Scale and square root augmented state covariance
     Eigen::MatrixXd scaledStateCovariance = (lambda + N) * covMatrix;
     Eigen::LLT<Eigen::MatrixXd> lDecomp(scaledStateCovariance);
     Eigen::MatrixXd S = lDecomp.matrixL();
        
-    sigmaPoints.push_back(stVector); // Add the mean
+    sigPoints.push_back(stVector); // Add the mean
     
     for (int i=0; i<N; i++) // Add the spread points
     {
         Eigen::VectorXd column = getColumn(S, i);    
         Eigen::VectorXd sigmaPoint = stVector + column; // +
-        sigmaPoints.push_back(sigmaPoint);
+        sigPoints.push_back(sigmaPoint);
         
         sigmaPoint = stVector - column; // -
-        sigmaPoints.push_back(sigmaPoint);
+        sigPoints.push_back(sigmaPoint);
     }
     
 //    printf("# of sigma points = %d\n", sigmaPoints.size());
     //printSigmaPoints();
 }
 
-void ukf::cleanCovariance()
+void UKF::cleanCovariance()
 {
    for (int row = stateSize; row<stateCovariance.rows(); row++)
    {
@@ -448,165 +317,72 @@ void ukf::cleanCovariance()
    }
 }
 
-void ukf::augmentStateVector()
+void UKF::augmentStateVector()
 {
-    int noiseSize = processCovariance.rows();
-    int totalSize = stateSize + noiseSize;
-    stateVector.conservativeResize(totalSize);
+    stateVector.conservativeResize(stateVector.rows() + cameraNoiseSize + numLandmarks);
     //Reset all noise to 0 in State
-    for (int i=stateSize; i<totalSize; i++)
+    for (int i=stateSize; i<stateVector.rows(); i++)
     {
         stateVector(i) = 0.0;
     }
-    
-    //printf("Augmented State Vector:\n");
-    //std::cout << stateVector << std::endl << std::endl;
 }
 
-void ukf::augmentStateCovariance()
+void UKF::augmentStateCovariance()
 {
-    stateCovariance.conservativeResize(stateVector.rows(), stateVector.rows());
-    cleanCovariance();
+    Eigen::MatrixXd tmpCovariance;
+    tmpCovariance.resize(stateVector.rows(), stateVector.rows());
+    clear(tmpCovariance);
+    tmpCovariance.block(0,0, stateCovariance.rows(), stateCovariance.cols()) = stateCovariance;
+    tmpCovariance.block(stateCovariance.rows(), stateCovariance.cols(), processCovariance.rows(), processCovariance.cols()) = processCovariance;
     
-//    printf("Enlarged state covariance:\n");
-//    std::cout << stateCovariance << std::endl;
-    
-    printf("stateCovariance is %d x %d\n", stateCovariance.rows(), stateCovariance.cols());
-    printf("processNoiseCovariance is %d x %d\n", processCovariance.rows(), processCovariance.cols());
-    //printf("startIndex = %d    numRows = %d\n", unaugmentedStateSize, augmentedStateSize-unaugmentedStateSize);
-    //Add Q (i.e.) process noise covariance
-    stateCovariance.block(stateSize, stateSize, stateCovariance.rows()-stateSize, stateCovariance.cols()-stateSize) = processCovariance;
+    stateCovariance = tmpCovariance;
+//    stateCovariance.conservativeResize(stateVector.rows(), stateVector.rows());
+//    cleanCovariance();
+//    stateCovariance.block(stateSize, stateSize, stateCovariance.rows()-stateSize, stateCovariance.cols()-stateSize) = processCovariance;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 //                           PROCESS UPDATE
 /////////////////////////////////////////////////////////////////////////////////////////////
-void ukf::processUpdate(double deltaT)
+void UKF::processUpdate(double deltaT)
 {
+    int tmpStateSize = stateVector.rows();
     augmentStateVector();
+    //print("State:", stateVector);
     augmentStateCovariance();
-    
-    generateSigmaPoints(stateVector, stateCovariance);
-    for (int i=0; i<sigmaPoints.size(); i++)
-    {
-        //Remove measurement noise from sigmaPoint;
-        //sigmaPoints.at(i).conservativeResize(unaugmentedStateSize+processNoiseSize);
-        processFunction3D(sigmaPoints.at(i), deltaT);
-        //printf("------Processed Sigma Point %d ------\n", i);
-        //printStateVector(sigmaPoints.at(i));
-    }
-    
-    //Compute a priori Mean
-    aPrioriStateMean.resize(stateSize);
-    initializeVector2Zero(aPrioriStateMean);
-    for (int i=0; i<sigmaPoints.size(); i++)
-    {
-        //Remove noise values from sigmaPoint
-        sigmaPoints.at(i).conservativeResize(stateSize);
-        aPrioriStateMean = aPrioriStateMean + (meanWeight(i) * sigmaPoints.at(i));
-    }
-    //std::cout << "The a priori state mean estimate:" << std::endl;
-    //std::cout << aPrioriStateMean << std::endl << std::endl;
-    
-    //Compute a priori Covariance
-    aPrioriStateCovariance.resize(aPrioriStateMean.rows(), aPrioriStateMean.rows());
-    initializeMatrix2Zero(aPrioriStateCovariance);    
-    for (int i=0; i<sigmaPoints.size(); i++)
-    {
-        Eigen::VectorXd tmpState(stateVector.rows(), 1);
-        initializeVector2Zero(tmpState);
-        
-        //printf("------ State Mean ------\n");
-        //printStateVector(aPrioriStateMean);
-        
-        //printf("------ Sigma Point %d ------\n",i);
-        //printStateVector(sigmaPoints.at(i));
-        
-        tmpState = sigmaPoints.at(i) - aPrioriStateMean;
-        //printf("------ tmpState ------\n");
-        //printStateVector(tmpState);
-        aPrioriStateCovariance = aPrioriStateCovariance + covarianceWeight(i) * ( tmpState * tmpState.transpose() );
-    }
-    
-    //Pure additive noise scenario
-    //aPrioriStateCovariance = aPrioriStateCovariance + processCovariance;
-    //std::cout << "The a priori state covariance:" << std::endl;
-    //std::cout << aPrioriStateCovariance << std::endl;
-    
-    //Pure additive noise scenario
-    //generateSigmaPoints(aPrioriStateMean, aPrioriStateCovariance);
-    
+    //print("Covariance:", stateCovariance);
+    unscentedTransform(stateVector, stateCovariance,  &UKF::processFunction, deltaT);
+    stateVector.conservativeResize(tmpStateSize);
+    stateCovariance.conservativeResize(tmpStateSize, tmpStateSize);
     predictMeasurements();
-
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 //                           PROCESS UPDATE WITH CONTROL
 /////////////////////////////////////////////////////////////////////////////////////////////
-void ukf::processUpdate(double deltaT, Eigen::VectorXd control)
+void UKF::processUpdate(double deltaT, Eigen::Vector3d control)
 {
+    int tmpStateSize = stateVector.rows();
+    augmentStateVector();
+    //print("State:", stateVector);
+    augmentStateCovariance();
+    //print("Covariance:", stateCovariance);
+    unscentedTransform(stateVector, stateCovariance,  &UKF::processFunction, deltaT, control);
     
-}
-
-void ukf::processFunction2D(Eigen::VectorXd& sigmaPoint, double deltaT)
-{
-    Eigen::Vector2d position;
-    position(0,0) = sigmaPoint(0,0);
-    position(1,0) = sigmaPoint(1,0);
-    
-    Eigen::Vector2d velocity;
-    velocity(0,0) = sigmaPoint(2,0);
-    velocity(1,0) = sigmaPoint(3,0);
-    
-    Eigen::Vector2d acceleration;
-    acceleration(0,0) = sigmaPoint(4,0);
-    acceleration(1,0) = sigmaPoint(5,0);
-    
-    Eigen::Vector2d positionNoise;
-    positionNoise(0,0) = sigmaPoint(stateSize);
-    positionNoise(1,0) = sigmaPoint(stateSize+1);
-    
-    Eigen::Vector2d velocityNoise;
-    velocityNoise(0,0) = sigmaPoint(stateSize+2);
-    velocityNoise(1,0) = sigmaPoint(stateSize+3);
-    
-    Eigen::Vector2d accelerationNoise;
-    accelerationNoise(0,0) = sigmaPoint(stateSize+4);
-    accelerationNoise(1,0) = sigmaPoint(stateSize+5);
-    
-    //position = position + (velocity * deltaT) + processNoise;
-    acceleration = acceleration + accelerationNoise;
-    velocity = velocity + velocityNoise;
-    position = position + positionNoise;
-    
-    position = position + 
-            (0.5 * acceleration * (deltaT * deltaT)) +
-            (velocity * deltaT);
-    
-    velocity = velocity + acceleration * deltaT;
-     
-    
-    for (int i=0; i<numLandmarks; i++)
+    // De-augment everything
+    stateVector.conservativeResize(tmpStateSize);
+    stateCovariance.conservativeResize(tmpStateSize, tmpStateSize);
+    for (int i=0; i<sigmaPoints.size(); i++)
     {
-        int inverseDepthIndex = getLandmarkIndex(i) + 4;
-        double inverseDepthNoise = sigmaPoint(stateSize + cameraStateSize + i); // Gets the ith landmark's noise
-        //printf("inverseDepthNoise = %.10f\n", inverseDepthNoise);
-        sigmaPoint(inverseDepthIndex, 0) = sigmaPoint(inverseDepthIndex, 0) + inverseDepthNoise;
-    }
+        sigmaPoints[i].conservativeResize(tmpStateSize);
+    }  
     
-        
-    sigmaPoint(0,0) = position(0,0);
-    sigmaPoint(1,0) = position(1,0);
-    sigmaPoint(2,0) = velocity(0,0);
-    sigmaPoint(3,0) = velocity(1,0);
-    sigmaPoint(4,0) = acceleration(0,0);
-    sigmaPoint(5,0) = acceleration(1,0);
+    generateSigmaPoints(stateVector, stateCovariance, sigmaPoints);
     
-    //printf("Processed Sigma Point\n");
-    //std::cout << sigmaPoint << std::endl << std::endl;
+    predictMeasurements();
 }
 
-void ukf::processFunction3D(Eigen::VectorXd& sigmaPoint, double deltaT)
+void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT)
 {
     Eigen::Vector3d position;
     position[0] = sigmaPoint[0];
@@ -616,48 +392,17 @@ void ukf::processFunction3D(Eigen::VectorXd& sigmaPoint, double deltaT)
     Eigen::Vector3d velocity;
     velocity[0] = sigmaPoint[3];
     velocity[1] = sigmaPoint[4];
-    velocity[2] = sigmaPoint[5];
-    
-    Eigen::Vector3d acceleration;
-    acceleration[0] = sigmaPoint[6];
-    acceleration[1] = sigmaPoint[7];
-    acceleration[2] = sigmaPoint[8];
-    
+    velocity[2] = sigmaPoint[5];    
 
-    Eigen::Vector3d positionNoise;
-    positionNoise[0] = sigmaPoint[stateSize];
-    positionNoise[1] = sigmaPoint[stateSize+1];
-    positionNoise[2] = sigmaPoint[stateSize+2];
-    
-    Eigen::Vector3d velocityNoise;
-    velocityNoise[0] = sigmaPoint[stateSize+3];
-    velocityNoise[1] = sigmaPoint[stateSize+4];
-    velocityNoise[2] = sigmaPoint[stateSize+5];
-    
     Eigen::Vector3d accelerationNoise;
-    accelerationNoise[0] = sigmaPoint[stateSize+6];
-    accelerationNoise[1] = sigmaPoint[stateSize+7];
-    accelerationNoise[2] = sigmaPoint[stateSize+8];
+    accelerationNoise[0] = sigmaPoint[stateSize];
+    accelerationNoise[1] = sigmaPoint[stateSize+1];
+    accelerationNoise[2] = sigmaPoint[stateSize+2];
     
-    //position = position + (velocity * deltaT) + processNoise;
-    acceleration = acceleration + accelerationNoise;
-    velocity = velocity + velocityNoise;
-    position = position + positionNoise;
+    Eigen::Vector3d timeSliceVelocity = accelerationNoise * deltaT;
     
-//     if (accelerationNoise.x() != 0.0)
-//    {
-//        printf("Acceleration Noise: (%f, %f, %f)\n", accelerationNoise.x(), accelerationNoise.y(), accelerationNoise.z());
-//        printf("Acceleration after noise: (%f, %f, %f)\n", acceleration.x(), acceleration.y(), acceleration.z());
-//    }
-    
-    position = position + 
-            (0.5 * acceleration * (deltaT * deltaT)) +
-            (velocity * deltaT);
-    
-    velocity = velocity + acceleration * deltaT;
-     
-//    printf("Position after noise: (%.20f, %f, %f)\n", position.x(), position.y(), position.z());
-//    printf("\n");
+    position = position + (velocity + timeSliceVelocity) * deltaT;
+    velocity = velocity + timeSliceVelocity;
     
     // Put process results back into the sigma point.
     sigmaPoint[0] = position.x();
@@ -666,32 +411,61 @@ void ukf::processFunction3D(Eigen::VectorXd& sigmaPoint, double deltaT)
     sigmaPoint[3] = velocity.x();
     sigmaPoint[4] = velocity.y();
     sigmaPoint[5] = velocity.z();
-    sigmaPoint[6] = acceleration.x();
-    sigmaPoint[7] = acceleration.y();
-    sigmaPoint[8] = acceleration.z();
     
     for (int i=0; i<numLandmarks; i++)
     {
         int inverseDepthIndex = getLandmarkIndex(i) + 6;
-        double inverseDepthNoise = sigmaPoint(stateSize + cameraStateSize + i); // Gets the ith landmark's noise
-        //printf("inverseDepthNoise = %.10f\n", inverseDepthNoise);
+        double inverseDepthNoise = sigmaPoint(stateSize + cameraNoiseSize + i); // Gets the ith landmark's noise
         sigmaPoint[inverseDepthIndex] = sigmaPoint[inverseDepthIndex] + inverseDepthNoise;
     }
-    
-    //printf("Processed Sigma Point\n");
-    //std::cout << sigmaPoint << std::endl << std::endl;
 }
 
-void ukf::predictMeasurements()
+void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::Vector3d control)
 {
-    predictedMeasurements.clear();
-    //Cycle through sigma points
+    Eigen::Vector3d position;
+    position[0] = sigmaPoint[0];
+    position[1] = sigmaPoint[1];
+    position[2] = sigmaPoint[2];
+    
+    Eigen::Vector3d velocity;
+    velocity[0] = sigmaPoint[3];
+    velocity[1] = sigmaPoint[4];
+    velocity[2] = sigmaPoint[5];    
+
+    Eigen::Vector3d accelerationNoise;
+    accelerationNoise[0] = sigmaPoint[stateSize];
+    accelerationNoise[1] = sigmaPoint[stateSize+1];
+    accelerationNoise[2] = sigmaPoint[stateSize+2];
+    
+    Eigen::Vector3d timeSliceVelocity = (control + accelerationNoise) * deltaT;
+    
+    position = position + (velocity + timeSliceVelocity) * deltaT;
+    velocity = velocity + timeSliceVelocity;
+    
+    // Put process results back into the sigma point.
+    sigmaPoint[0] = position.x();
+    sigmaPoint[1] = position.y();
+    sigmaPoint[2] = position.z();
+    sigmaPoint[3] = velocity.x();
+    sigmaPoint[4] = velocity.y();
+    sigmaPoint[5] = velocity.z();
+    
+//    for (int i=0; i<numLandmarks; i++)
+//    {
+//        int inverseDepthIndex = getLandmarkIndex(i) + 6;
+//        double inverseDepthNoise = sigmaPoint(stateSize + cameraNoiseSize + i); // Gets the ith landmark's noise
+//        sigmaPoint[inverseDepthIndex] = sigmaPoint[inverseDepthIndex] + inverseDepthNoise;
+//    }
+}
+
+void UKF::predictMeasurements()
+{
+    
+    predictedMeasurements.clear();    
     for (int i=0; i<sigmaPoints.size(); i++)
     {
         Eigen::VectorXd measurement;
-        //printf("------ Predicting measurement from sigma point %d / %d ------\n", i, sigmaPoints.size());
-//        bool inFrontofCamera = measureLandmarks2D(sigmaPoints.at(i), measurement);
-        bool inFrontofCamera = measureLandmarks3D(sigmaPoints.at(i), measurement);
+        bool inFrontofCamera = measureLandmarks(sigmaPoints.at(i), measurement);
         if (inFrontofCamera)
         {
             predictedMeasurements.push_back(measurement);
@@ -703,70 +477,22 @@ void ukf::predictMeasurements()
             printf("*        Landmark behind CAMERA           *\n");
             printf("*******************************************\n");
         }
-        //printf("--- Predicted Measurement %d ------\n", i);
-        //std::cout << predictedMeasurements.at(i) << std::endl;
-        //printf("\n");
     }
     
+    double N = (sigmaPoints.size() - 1) / 2.0;
     aPrioriMeasurementsMean.resize(numLandmarks * 2);
-    initializeVector2Zero(aPrioriMeasurementsMean);
+    clear(aPrioriMeasurementsMean);
     for (int i=0; i<sigmaPoints.size(); i++)
     {
-        aPrioriMeasurementsMean = aPrioriMeasurementsMean + (meanWeight(i) * predictedMeasurements.at(i));
+        aPrioriMeasurementsMean = aPrioriMeasurementsMean + (meanWeight(i, N) * predictedMeasurements.at(i));
     }
 }
 
-bool ukf::measureLandmarks2D(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measurement)
-{
-    //Just one value per observation of landmark corresponding to 1 dimensional optical sensor
-    measurement.resize(numLandmarks);
-    
-    Eigen::Vector2d camPosition;
-    camPosition(0,0) = sigmaPoint(0,0);
-    camPosition(1,0) = sigmaPoint(1,0);
-    
-    Eigen::Vector2d origin;
-    Eigen::Vector2d direction;
-    double inverseDepth;
-    
-    for (int i=0; i<numLandmarks; i++)
-    {
-        int index = getLandmarkIndex(i);
-        
-        origin(0,0) = sigmaPoint(index, 0);
-        origin(1,0) = sigmaPoint(index + 1, 0);
-        direction(0,0) = sigmaPoint(index+2, 0);
-        direction(1,0) = sigmaPoint(index+3, 0);
-        inverseDepth = sigmaPoint(index+4, 0);
-        
-        
-        //printf("------Sigma Point ------\n");
-        //std::cout << sigmaPoint << std::endl << std::endl;
-        
-        Eigen::Vector2d euclideanLandmark = origin + (1.0/inverseDepth) * direction;
-        //printf("Euclidean Landmark\n");
-        //std::cout << euclideanLandmark << std::endl;
-        if (euclideanLandmark(0,0) <= 0.0)
-        {
-            //Landmark behind camera
-            return false;
-        }
-        
-        
-        //With focal length of 1, the measurment is just the slope
-        double slope = (euclideanLandmark(1,0) - camPosition(1,0)) /
-                       (euclideanLandmark(0,0) - camPosition(0,0));
-        measurement(i,0) = slope;
-    }
-    
-    return true;
-}
-
-bool ukf::measureLandmarks3D(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measurement)
+bool UKF::measureLandmarks(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measurement)
 {
     // 2 values per observation of landmark corresponding to 2 dimensional optical sensor
     measurement.resize(numLandmarks * 2);
-    initializeVector2Zero(measurement);
+    clear(measurement);
     
     Eigen::Vector3d camPosition;
     camPosition[0] = sigmaPoint[0];
@@ -793,7 +519,7 @@ bool ukf::measureLandmarks3D(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measur
         Eigen::Vector3d euclideanLandmark = origin + (1.0/inverseDepth) * direction;
         //printf("Euclidean Landmark %d / %d\n", i, numLandmarks);
         //std::cout << euclideanLandmark << std::endl;
-        if (euclideanLandmark(0,0) <= 0.0)
+        if (euclideanLandmark(0,0) <= camPosition[0])
         {
             //Landmark behind camera
             return false;
@@ -811,8 +537,8 @@ bool ukf::measureLandmarks3D(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measur
         
         measurement[j] = pixel.x();
         measurement[j+1] = pixel.y();
-//        printf("pixel @ %d = (%.20f, %.20f)\n", j, pixel.x(), pixel.y());
-//        print("Measurement:", measurement);
+        //printf("pixel @ %d = (%.20f, %.20f)\n", j, pixel.x(), pixel.y());
+        //print("Measurement:", measurement);
 //        printf("\n");
     }
     return true;
@@ -821,7 +547,7 @@ bool ukf::measureLandmarks3D(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measur
 /////////////////////////////////////////////////////////////////////////////////////////////
 //                           MEASUREMENT UPDATE
 /////////////////////////////////////////////////////////////////////////////////////////////
-void ukf::measurementUpdate(Eigen::VectorXd measurement)
+void UKF::measurementUpdate(Eigen::VectorXd measurement)
 {
 //    print("Actual Measurement:", measurement);
 //    print("Predicted Measurement:", aPrioriMeasurementsMean);
@@ -829,29 +555,31 @@ void ukf::measurementUpdate(Eigen::VectorXd measurement)
 //    tmpDiff = measurement - aPrioriMeasurementsMean;
 //    print("Difference:", tmpDiff);
     
-    Eigen::VectorXd tmpState(stateVector.rows(), 1);
-    Eigen::VectorXd tmpMeasurement(stateVector.rows(), 1);
+    Eigen::VectorXd tmpState(stateVector.rows());
+    Eigen::VectorXd tmpMeasurement(stateVector.rows());
     
-    Pxz.resize(aPrioriStateMean.rows(), aPrioriMeasurementsMean.rows());
-    initializeMatrix2Zero(Pxz);
+    double N = (sigmaPoints.size() - 1.0) / 2.0;
+    
+    Pxz.resize(stateVector.rows(), aPrioriMeasurementsMean.rows());
+    clear(Pxz);
     for (int i=0; i<sigmaPoints.size(); i++)
     {
-        initializeVector2Zero(tmpState);
-        tmpState = sigmaPoints.at(i) - aPrioriStateMean;
+        clear(tmpState);
+        tmpState = sigmaPoints[i] - stateVector;
         
-        initializeVector2Zero(tmpMeasurement);
-        tmpMeasurement = predictedMeasurements.at(i) - aPrioriMeasurementsMean;        
+        clear(tmpMeasurement);
+        tmpMeasurement = predictedMeasurements[i] - aPrioriMeasurementsMean;        
         
-        Pxz = Pxz + covarianceWeight(i) * (tmpState * tmpMeasurement.transpose());
+        Pxz = Pxz + covarianceWeight(i, N) * (tmpState * tmpMeasurement.transpose());
     }
     
     Pzz.resize(aPrioriMeasurementsMean.rows(), aPrioriMeasurementsMean.rows());
-    initializeMatrix2Zero(Pzz);
+    clear(Pzz);
     for (int i=0; i<sigmaPoints.size(); i++)
     {
-        initializeVector2Zero(tmpMeasurement);
-        tmpMeasurement = predictedMeasurements.at(i) - aPrioriMeasurementsMean;
-        Pzz = Pzz + covarianceWeight(i) * (tmpMeasurement * tmpMeasurement.transpose());
+        clear(tmpMeasurement);
+        tmpMeasurement = predictedMeasurements[i] - aPrioriMeasurementsMean;
+        Pzz = Pzz + covarianceWeight(i, N) * (tmpMeasurement * tmpMeasurement.transpose());
     }
     
     // Keep in both pure additive and mixture model
@@ -862,64 +590,19 @@ void ukf::measurementUpdate(Eigen::VectorXd measurement)
     
     //print("Kalman Gain:", K);
     
-    stateVector = aPrioriStateMean + K * (measurement - aPrioriMeasurementsMean);
+    stateVector = stateVector + K * (measurement - aPrioriMeasurementsMean);
 //    printf("New Position: (%.20f, %.20f %.20f)\n", stateVector[0], stateVector[1], stateVector[2]);
 //    printf("\n");
     
-    stateCovariance = aPrioriStateCovariance - (K * Pzz * K.transpose());
+    stateCovariance = stateCovariance - (K * Pzz * K.transpose());
     //print("Filtered State Covariance:", stateCovariance);
 }
 
-void ukf::printStateVector(Eigen::VectorXd vector)
-{
-    printf("Camera Position:     (%f, %f, %f)\n", vector[0], vector[1], vector[2]);
-    printf("Camera Velocity:     (%f, %f, %f)\n", vector[3], vector[4], vector[5]);
-    printf("Camera Acceleration:     (%f, %f, %f)\n", vector[6], vector[7], vector[8]);    
-    
-    std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> > lms = landmarks();
-    for (int i=0; i<numLandmarks; i++)
-    {
-        printf("--- Landmark %d ---\n", i);
-        printf("(%f, %f, %f)\n", lms.at(i)[0], lms.at(i)[1], lms.at(i)[2]);
-    }
-    printf("\n");
-}
-
-void ukf::printSigmaPoints()
-{
-    for (int i=0; i<sigmaPoints.size(); i++)
-    {
-        printf("------ Sigma Point %d ------\n", i);
-        //printStateVector(sigmaPoints.at(i));
-        std::cout << sigmaPoints.at(i) << std::endl;
-        printf("----------------------------\n");
-    }
-}
-
-void ukf::initializeMatrix2Zero(Eigen::MatrixXd& matrix)
-{
-    for (int i=0; i<matrix.rows(); i++)
-    {
-        for (int j=0; j<matrix.cols(); j++)
-        {
-            matrix(i,j) = 0.0;
-        }
-    }
-}
-
-void ukf::initializeVector2Zero(Eigen::VectorXd& vector)
-{
-    for (int i=0; i<vector.rows(); i++)
-    {
-        vector(i,0) = 0.0;
-    }
-}
-
-Eigen::Vector3d ukf::getEuclideanLandmark(int index)
+Eigen::Vector3d UKF::getEuclideanLandmark(int index)
 {
     int i = getLandmarkIndex(index);
     
-    Eigen::Vector3d origin;    
+    Eigen::Vector3d origin;
     Eigen::Vector3d direction;
     double inverseDepth;
     
@@ -932,16 +615,158 @@ Eigen::Vector3d ukf::getEuclideanLandmark(int index)
     inverseDepth = stateVector[i+6];
 
     Eigen::Vector3d euclideanLandmark = origin + ((1.0/inverseDepth) * direction);
-    /*
-    printf("Euclidean Landmark %i\n", index);
-    printf("Origin\n");
-    std::cout << origin << std::endl;
-    printf("Direction\n");
-    std::cout << direction << std::endl;
-    printf("Depth\n");
-    std::cout << 1.0/inverseDepth << std::endl;
-    printf("Landmark\n");
-    std::cout << euclideanLandmark << std::endl;
-    */
+    
     return euclideanLandmark;
+}
+
+void UKF::unscentedTransform(Eigen::VectorXd& state, Eigen::MatrixXd& covariance, void (UKF::*process)(Eigen::VectorXd&))
+{
+    //std::vector<Eigen::VectorXd, Eigen::aligned_allocator<Eigen::VectorXd> > sigPoints;
+    generateSigmaPoints(state, covariance, sigmaPoints);
+    double N = state.rows();
+    
+    // Process sigma points
+    for (int i=0; i<sigmaPoints.size(); i++)
+    {
+        (this->*process)(sigmaPoints[i]);
+    }
+    
+    // Create the new state
+    state.resize(sigmaPoints[0].rows());
+    clear(state);
+    for (int i=0; i<sigmaPoints.size(); i++)
+    {
+        double mean_weight = meanWeight(i, N);
+        state = state + mean_weight * sigmaPoints[i];
+    }
+    
+    // Create the new covariance
+    Eigen::VectorXd tmpDiff;
+    tmpDiff.resize(sigmaPoints[0].rows());
+    clear(tmpDiff);
+    covariance.resize(sigmaPoints[0].rows(), sigmaPoints[0].rows());
+    clear(covariance);
+    for (int i=0; i<sigmaPoints.size(); i++)
+    {
+        tmpDiff = sigmaPoints[i] - state;
+        covariance = covariance + covarianceWeight(i, N) * (tmpDiff * tmpDiff.transpose());
+    }
+}
+
+void UKF::unscentedTransform(Eigen::VectorXd& state, Eigen::MatrixXd& covariance, void (UKF::*process)(Eigen::VectorXd&, double), double deltaT)
+{
+    //std::vector<Eigen::VectorXd, Eigen::aligned_allocator<Eigen::VectorXd> > sigPoints;
+    generateSigmaPoints(state, covariance, sigmaPoints);
+    double N = state.rows();
+    
+    // Process sigma points
+    for (int i=0; i<sigmaPoints.size(); i++)
+    {
+        (this->*process)(sigmaPoints[i], deltaT);
+        //sigmaPoints[i].conservativeResize(sigmaPoints[i].rows() - cameraNoiseSize - numLandmarks);
+    }
+    
+    // Create the new state
+    state.resize(sigmaPoints[0].rows());
+    clear(state);
+    for (int i=0; i<sigmaPoints.size(); i++)
+    {
+        state = state + meanWeight(i, N) * sigmaPoints[i];
+    }
+    
+    // Create the new covariance
+    Eigen::VectorXd tmpDiff;
+    tmpDiff.resize(sigmaPoints[0].rows());
+    clear(tmpDiff);
+    covariance.resize(sigmaPoints[0].rows(), sigmaPoints[0].rows());
+    clear(covariance);
+    for (int i=0; i<sigmaPoints.size(); i++)
+    {
+        tmpDiff = sigmaPoints[i] - state;
+        covariance = covariance + covarianceWeight(i, N) * (tmpDiff * tmpDiff.transpose());
+    }
+}
+
+void UKF::unscentedTransform(Eigen::VectorXd& state, Eigen::MatrixXd& covariance, void (UKF::*process)(Eigen::VectorXd&, double, Eigen::Vector3d), double deltaT, Eigen::Vector3d control)
+{
+    //std::vector<Eigen::VectorXd, Eigen::aligned_allocator<Eigen::VectorXd> > sigPoints;
+    generateSigmaPoints(state, covariance, sigmaPoints);
+    double N = state.rows();
+    
+    // Process sigma points
+    for (int i=0; i<sigmaPoints.size(); i++)
+    {
+        (this->*process)(sigmaPoints[i], deltaT, control);
+        //sigmaPoints[i].conservativeResize(sigmaPoints[i].rows() - cameraNoiseSize - numLandmarks);
+    }
+    
+    // Create the new state
+    state.resize(sigmaPoints[0].rows());
+    clear(state);
+    for (int i=0; i<sigmaPoints.size(); i++)
+    {
+        state = state + meanWeight(i, N) * sigmaPoints[i];
+    }
+    
+    // Create the new covariance
+    Eigen::VectorXd tmpDiff;
+    tmpDiff.resize(sigmaPoints[0].rows());
+    clear(tmpDiff);
+    covariance.resize(sigmaPoints[0].rows(), sigmaPoints[0].rows());
+    clear(covariance);
+    for (int i=0; i<sigmaPoints.size(); i++)
+    {
+        tmpDiff = sigmaPoints[i] - state;
+        covariance = covariance + covarianceWeight(i, N) * (tmpDiff * tmpDiff.transpose());
+    }
+}
+
+void UKF::addLandmark(Eigen::VectorXd& sigmaPoint)
+{
+    Eigen::VectorXd outState(sigmaPoint.rows());
+    outState = sigmaPoint;
+    outState.conservativeResize(sigmaPoint.rows() + 3 * numLandmarks);
+    
+    //print("state in:", sigmaPoint);
+    Eigen::Vector3d origin;
+    origin << sigmaPoint[0], sigmaPoint[1], sigmaPoint[2];
+    
+    for (int i=0; i<numLandmarks; i++)
+    {
+        int inIndex = 6 + i * 4;
+        int outIndex = 6 + i * 7;
+        Eigen::Vector3d direction;
+        direction << sigmaPoint[inIndex], sigmaPoint[inIndex + 1], sigmaPoint[inIndex + 2];
+        
+        Eigen::Matrix3d rotMat;
+        rotMat = simCamera.direction;
+        direction = rotMat * direction;
+        direction.normalize();
+        double inverseDepth = sigmaPoint[inIndex + 3];
+        
+        outState.segment(outIndex, 3) = origin;
+        outState.segment(outIndex + 3, 3) = direction;
+        outState[outIndex + 6] = inverseDepth;
+    }
+    
+    sigmaPoint.resize(outState.rows());
+    sigmaPoint = outState;
+    
+    
+//    Eigen::Vector3d direction;
+//    direction << sigmaPoint[sigmaPoint.rows()-4], sigmaPoint[sigmaPoint.rows()-3], sigmaPoint[sigmaPoint.rows()-2];
+//    
+//    Eigen::Matrix3d rotMat;
+//    rotMat = simCamera.direction;
+//    direction = rotMat * direction;
+//    direction.normalize();
+//    
+//    double inverseDepth = sigmaPoint[sigmaPoint.rows()-1];
+//    
+//    sigmaPoint.conservativeResize(sigmaPoint.rows() + 3);
+//    sigmaPoint.segment(sigmaPoint.rows() - 7, 3) = origin;
+//    sigmaPoint.segment(sigmaPoint.rows() - 4, 3) = direction;
+//    sigmaPoint[sigmaPoint.rows()-1] = inverseDepth;
+    //print("state out:", sigmaPoint);
+    //printf("\n");
 }

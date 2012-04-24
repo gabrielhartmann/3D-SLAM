@@ -8,103 +8,97 @@
 #ifndef UKF_HPP
 #define	UKF_HPP
 
-#include <GL/glut.h>
 #include <eigen3/Eigen/Geometry>
 #include <eigen3/Eigen/Dense>
-//#include <eigen3/Eigen/LU>
 #include <eigen3/Eigen/Cholesky>
+#include <GL/glut.h>
+#include <stdio.h>
+
 #include "Color.hpp"
 #include "landmark.hpp"
-#include "simCamera.hpp"
+#include "Device.hpp"
 #include "Utilities.h"
 
-class ukf
+class UKF
 {
 public:
-    ukf();
-    ukf(SimCamera simCamera);
+    UKF();
+    UKF(Device simCamera, SimScene scene);
     void initialize();
     void step(double timeStep, Eigen::VectorXd measurement);
-    void step(double timeStep, Eigen::VectorXd control, Eigen::VectorXd measurement);
+    void step(double timeStep, Eigen::Vector3d control, Eigen::VectorXd measurement);
     Eigen::Vector3d position();
     void draw();
     std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> > landmarks();
-    void reset(SimCamera simCamera);
+    void reset(Device simCamera);
+    
 private:
-    int filterStepCount;
+    int numLandmarks;
+    const static int deviceStateSize = 6;
+    const static int landmarkSize = 7;
+    const static int cameraNoiseSize = 3;
+    const static double defaultDepth = 100.0;
+    int stateSize;
+    
+    Eigen::VectorXd stateVector;
+    Eigen::MatrixXd stateCovariance;
+    Eigen::MatrixXd measurementCovariance;
+    Eigen::MatrixXd processCovariance;
+    
+    void initializeStateAndCovariance();
+    void initializeMeasurementCovariance();   
+    void initializeProcessCovariance();
+    
     void cleanCovariance();
     void augmentStateVector();
     void augmentStateCovariance();
     void processUpdate(double deltaT);
-    void processUpdate(double deltaT, Eigen::VectorXd control);
+    void processUpdate(double deltaT, Eigen::Vector3d control);
     void predictMeasurements();
     void measurementUpdate(Eigen::VectorXd measurement);
     
-    SimCamera simCamera;
-    
-    int numLandmarks;
-    const static int cameraStateSize = 9;
-    const static int landmarkSize = 7;
-    int stateSize;
-    
-    const static double inverseDepthVariance = 0.0625;
+    const static double inverseDepthVariance = 0.1;
     const static double accelerationVariance = 0.0625;
     const static double measurementVariance = 0.025;
-   
-    Eigen::VectorXd stateVector;
-    void initializeStateVector2D();
-    void initializeStateVector3D();
+    
+    int filterStepCount;
+        
+    Device simCamera;
+    SimScene scene;
        
-    Eigen::MatrixXd stateCovariance;
-    void initializeStateCovariance2D();
-    void initializeStateCovariance3D();
-    
-    Eigen::MatrixXd measurementCovariance;
-    void initializeMeasurementCovariance();
-    
-    Eigen::MatrixXd processCovariance;
-    void initializeProcessCovariance();
-    
     int getLandmarkIndex(int i);
     
-    
     // Sigma point scaling values
-    double lambda;
     double alpha;
     double beta;
-    double N;
-    double meanWeight(int index);
-    double covarianceWeight(int index);
+    double meanWeight(int index, double degree);
+    double covarianceWeight(int index, double degree);
     
-    void generateSigmaPoints(Eigen::VectorXd stVector, Eigen::MatrixXd covMatrix);
-    std::vector<Eigen::VectorXd, Eigen::aligned_allocator<Eigen::VectorXd> > sigmaPoints;    
-    
-    void processFunction2D(Eigen::VectorXd& sigmaPoint, double deltaT);
-    void processFunction3D(Eigen::VectorXd& sigmaPoint, double deltaT);
-    Eigen::VectorXd getColumn(Eigen::MatrixXd M, int colIndex);
-    
-    Eigen::VectorXd aPrioriStateMean;
-    Eigen::MatrixXd aPrioriStateCovariance;
-    
-    
-    bool measureLandmarks2D(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measurement);
-    bool measureLandmarks3D(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measurement);
+    std::vector<Eigen::VectorXd, Eigen::aligned_allocator<Eigen::VectorXd> > sigmaPoints; 
     std::vector<Eigen::VectorXd, Eigen::aligned_allocator<Eigen::VectorXd> > predictedMeasurements;
-    Eigen::VectorXd aPrioriMeasurementsMean;
     
+    void generateSigmaPoints(Eigen::VectorXd stVector, Eigen::MatrixXd covMatrix, std::vector<Eigen::VectorXd, Eigen::aligned_allocator<Eigen::VectorXd> >& sigPoints);
+    void processFunction(Eigen::VectorXd& sigmaPoint, double deltaT);
+    void processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::Vector3d control);
+    bool measureLandmarks(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measurement);
+    
+    Eigen::VectorXd getColumn(Eigen::MatrixXd M, int colIndex);
+       
+    
+    Eigen::VectorXd aPrioriMeasurementsMean;
     Eigen::MatrixXd Pxz;
     Eigen::MatrixXd Pzz;
     Eigen::MatrixXd K;
     
-    void printStateVector(Eigen::VectorXd vector);
-    void printSigmaPoints();
-    void initializeMatrix2Zero(Eigen::MatrixXd& matrix);
-    void initializeVector2Zero(Eigen::VectorXd& vector);
-    
     Eigen::Vector3d getEuclideanLandmark(int index);
     
     void drawCamera();
+    
+    void unscentedTransform(Eigen::VectorXd& state, Eigen::MatrixXd& covariance, void (UKF::*process)(Eigen::VectorXd&));
+    void unscentedTransform(Eigen::VectorXd& state, Eigen::MatrixXd& covariance, void (UKF::*process)(Eigen::VectorXd&, double), double deltaT);
+    void unscentedTransform(Eigen::VectorXd& state, Eigen::MatrixXd& covariance, void (UKF::*process)(Eigen::VectorXd&, double, Eigen::Vector3d), double deltaT, Eigen::Vector3d control);
+    void addLandmark(Eigen::VectorXd& state);
+    void addLandmark(int i);
 };
 
 #endif	/* UKF_HPP */
-

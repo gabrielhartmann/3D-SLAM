@@ -14,7 +14,7 @@
 #include "Geometry.h"
 #include "Color.hpp"
 #include "simScene.hpp"
-#include "simCamera.hpp"
+#include "Device.hpp"
 #include "ukf.hpp"
 
 
@@ -32,8 +32,8 @@ CLighting lighting;
 Color color;
 
 SimScene simScene;
-SimCamera simCamera(simScene);
-ukf filter(simCamera);
+Device simCamera(simScene);
+UKF filter(simCamera, simScene);
 
 bool play = false;
 
@@ -92,7 +92,7 @@ void handleKeyboardEvent(unsigned char key, int x, int y)
         case ' ':
             play = false;
             simCamera.timeStep();
-            filter.step(simCamera.defaultTimeStep, simCamera.measure(simScene));
+            filter.step(simCamera.defaultTimeStep, simCamera.control(), simCamera.measure(simScene));
             break;
         case 'p':
         case 'P':
@@ -161,7 +161,7 @@ void idle()
     if (play)
     {
         simCamera.timeStep();
-        filter.step(simCamera.defaultTimeStep, simCamera.measure(simScene));
+        filter.step(simCamera.defaultTimeStep, simCamera.control(), simCamera.measure(simScene));
         glutPostRedisplay();
     }
 }

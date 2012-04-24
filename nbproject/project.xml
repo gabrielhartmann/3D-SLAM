@@ -23,5 +23,8 @@
                 </confElem>
             </confList>
         </data>
+        <spellchecker-wordlist xmlns="http://www.netbeans.org/ns/spellchecker-wordlist/1">
+            <word>Covar</word>
+        </spellchecker-wordlist>
     </configuration>
 </project>

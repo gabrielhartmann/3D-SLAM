@@ -63,9 +63,12 @@ inline int imin(int a, int b){ return (a<b)?a:b; }
 ///////////////////////////////////
 
 void print(string s, Eigen::VectorXd vector);
+void print(string s, Eigen::Vector3d vector);
 void print(string s, Eigen::MatrixXd matrix);
 void clear(Eigen::VectorXd& vec);
 void clear(Eigen::MatrixXd& mat);
+void clearCross(Eigen::MatrixXd& mat, int row, int col);
+void identity(Eigen::MatrixXd& mat);
 
 // skips line when reading an input file
 inline void skipLine(istream& s) { char c; 	do  s.get(c); while (c != '\n'); }

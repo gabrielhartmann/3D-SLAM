@@ -56,7 +56,7 @@ build/Debug/GNU-Linux-x86/main.o: main.cpp Trackball.h Lighting.h \
  /usr/include/eigen3/Eigen/src/Eigenvalues/ComplexEigenSolver.h \
  /usr/include/eigen3/Eigen/src/Eigenvalues/./ComplexSchur.h \
  /usr/include/eigen3/Eigen/src/Eigenvalues/MatrixBaseEigenvalues.h \
- simCamera.hpp landmark.hpp normalRandom.hpp ukf.hpp
+ Device.hpp landmark.hpp normalRandom.hpp ukf.hpp
 
 Trackball.h:
 
@@ -186,7 +186,7 @@ simScene.hpp:
 
 /usr/include/eigen3/Eigen/src/Eigenvalues/MatrixBaseEigenvalues.h:
 
-simCamera.hpp:
+Device.hpp:
 
 landmark.hpp:
 

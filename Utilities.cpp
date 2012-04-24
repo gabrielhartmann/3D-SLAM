@@ -223,6 +223,12 @@ void print(string s, Eigen::VectorXd vector)
     std::cout << vector.transpose() << std::endl;
 }
 
+void print(string s, Eigen::Vector3d vector)
+{
+    std::cout << s << " " << vector.rows() << " x " << vector.cols() << std::endl;
+    std::cout << vector.transpose() << std::endl;
+}
+
 void print(string s, Eigen::MatrixXd matrix)
 {
     std::cout << s << " " << matrix.rows() << " x " << matrix.cols() << std::endl;
@@ -244,6 +250,37 @@ void clear(Eigen::MatrixXd& mat)
         for (int col = 0; col < mat.cols(); col++)
         {
             mat(row, col) = 0.0;
+        }
+    }
+}
+
+void clearCross(Eigen::MatrixXd& mat, int row, int col)
+{
+    // Clear row
+    for (int c = 0; c < mat.cols(); c++)
+    {
+        mat(row, c) = 0.0;
+    }
+    
+    // Clear column
+    for (int r = 0; r < mat.rows(); r++)
+    {
+        mat(r, col) = 0.0;
+    }
+}
+
+void identity(Eigen::MatrixXd& mat)
+{
+    clear(mat);
+    for (int row = 0; row < mat.rows(); row++)
+    {
+        for (int col = 0; col < mat.cols(); col++)
+        {
+            if (row == col)
+            {
+                mat(row, col) = 1.0;    
+            }
+            
         }
     }
 }
