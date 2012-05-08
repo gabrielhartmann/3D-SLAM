@@ -20,7 +20,7 @@ Device::Device(SimScene simScene)
                                                      0.0, defaultFocalLength, 0.0,
                                                      0.0, 0.0, 1.0;
      
-    defaultTimeStep = 0.005;
+    defaultTimeStep = 0.033;
     sizeScale = 100;
     
     reset();

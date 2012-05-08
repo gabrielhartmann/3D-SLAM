@@ -38,8 +38,8 @@ SimScene::SimScene()
     //landmarks.push_back(Eigen::Vector3d (100.0, 0.0, 100.0));
     
 //    // Board
-    int height = 7;
-    int width =7;
+    int height = 4;
+    int width = 4;
     double space = 10;
     Eigen::Vector3d origin;
     origin << 200.0, -30.0, -30.0;
