@@ -57,6 +57,7 @@ inline float fmax(float a, float b){ return (a>b)?a:b; }
 inline float fmin(float a, float b){ return (a<b)?a:b; }
 inline int imax(int a, int b){ return (a>b)?a:b; }
 inline int imin(int a, int b){ return (a<b)?a:b; }
+double sinc(double x);
 
 ///////////////////////////////////
 //    input/output utilities     //

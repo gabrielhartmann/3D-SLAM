@@ -12,6 +12,7 @@
 #include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/Cholesky>
 #include <GL/glut.h>
+#include <math.h>
 #include <stdio.h>
 
 #include "Color.hpp"
@@ -26,17 +27,18 @@ public:
     UKF(Device simCamera, SimScene scene);
     void initialize();
     void step(double timeStep, Eigen::VectorXd measurement);
-    void step(double timeStep, Eigen::Vector3d control, Eigen::VectorXd measurement);
+    void step(double timeStep, Eigen::VectorXd control, Eigen::VectorXd measurement);
     Eigen::Vector3d position();
+    Eigen::Quaterniond direction();
     void draw();
     std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> > landmarks();
     void reset(Device simCamera);
     
 private:
     int numLandmarks;
-    const static int deviceStateSize = 6;
-    const static int landmarkSize = 7;
-    const static int cameraNoiseSize = 3;
+    const static int deviceStateSize = 10;
+    const static int landmarkSize = 6;
+    const static int cameraNoiseSize = 6;
     const static double defaultDepth = 100.0;
     int stateSize;
     
@@ -50,14 +52,16 @@ private:
     void initializeProcessCovariance();
     
     void cleanCovariance();
+    void normalizeDirection();
     void augmentStateVector();
     void augmentStateCovariance();
     void processUpdate(double deltaT);
-    void processUpdate(double deltaT, Eigen::Vector3d control);
+    void processUpdate(double deltaT, Eigen::VectorXd control);
     void predictMeasurements();
     void measurementUpdate(Eigen::VectorXd measurement);
     
     const static double inverseDepthVariance = 0.1;
+    const static double focalLengthVariance = 0.0001;
     const static double accelerationVariance = 0.0625;
     const static double measurementVariance = 0.025;
     
@@ -79,7 +83,7 @@ private:
     
     void generateSigmaPoints(Eigen::VectorXd stVector, Eigen::MatrixXd covMatrix, std::vector<Eigen::VectorXd, Eigen::aligned_allocator<Eigen::VectorXd> >& sigPoints);
     void processFunction(Eigen::VectorXd& sigmaPoint, double deltaT);
-    void processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::Vector3d control);
+    void processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::VectorXd control);
     bool measureLandmarks(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measurement);
     
     Eigen::VectorXd getColumn(Eigen::MatrixXd M, int colIndex);
@@ -91,12 +95,15 @@ private:
     Eigen::MatrixXd K;
     
     Eigen::Vector3d getEuclideanLandmark(int index);
+    void getAnglesFromDirection(Eigen::Vector3d direction, double &theta, double &phi);
+    Eigen::Vector3d getDirectionFromAngles(double theta, double phi);
+    Eigen::Quaterniond getQuaternionFromAngVelocity(Eigen::Vector3d angVelocity, double deltaT);
     
     void drawCamera();
     
     void unscentedTransform(Eigen::VectorXd& state, Eigen::MatrixXd& covariance, void (UKF::*process)(Eigen::VectorXd&));
     void unscentedTransform(Eigen::VectorXd& state, Eigen::MatrixXd& covariance, void (UKF::*process)(Eigen::VectorXd&, double), double deltaT);
-    void unscentedTransform(Eigen::VectorXd& state, Eigen::MatrixXd& covariance, void (UKF::*process)(Eigen::VectorXd&, double, Eigen::Vector3d), double deltaT, Eigen::Vector3d control);
+    void unscentedTransform(Eigen::VectorXd& state, Eigen::MatrixXd& covariance, void (UKF::*process)(Eigen::VectorXd&, double, Eigen::VectorXd), double deltaT, Eigen::VectorXd control);
     void addLandmark(Eigen::VectorXd& state);
     void addLandmark(int i);
 };
