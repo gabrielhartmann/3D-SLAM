@@ -284,3 +284,14 @@ void identity(Eigen::MatrixXd& mat)
         }
     }
 }
+
+double sinc(double x)
+{
+     if (std::fabs(x) < 1.0e-4)
+    {
+        return (1.0) - x * x*(0.166666666666666666667);
+    }
+    else{
+        return std::sin(x)/x;
+    }
+}

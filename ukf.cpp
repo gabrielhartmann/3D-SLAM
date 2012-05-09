@@ -39,7 +39,7 @@ void UKF::step(double timeStep, Eigen::VectorXd measurement)
     //print("Covariance:", stateCovariance);
 }
 
-void UKF::step(double timeStep, Eigen::Vector3d control, Eigen::VectorXd measurement)
+void UKF::step(double timeStep, Eigen::VectorXd control, Eigen::VectorXd measurement)
 {
     printf("======================================================================\n");
     printf("                                %d                                    \n", ++filterStepCount);
@@ -53,10 +53,14 @@ void UKF::step(double timeStep, Eigen::Vector3d control, Eigen::VectorXd measure
 
 Eigen::Vector3d UKF::position()
 {
-    //Eigen::Vector3d pos(stateVector(0,0), stateVector(1,0), 0.0);
     Eigen::Vector3d pos(stateVector[0], stateVector[1], stateVector[2]);
-    //printf("Filtered Camera Position: (%f, %f)\n", pos(0,0), pos(1,0));
     return pos;
+}
+
+Eigen::Quaterniond UKF::direction()
+{
+    Eigen::Quaterniond dir(stateVector[6], stateVector[7], stateVector[8], stateVector[9]);
+    return dir;
 }
 
 void UKF::draw()
@@ -79,8 +83,11 @@ void UKF::drawCamera()
     glPushMatrix();
     
     glTranslated(position()[0], position()[1], position()[2]);
-    Eigen::AngleAxisd aa(90.0, Eigen::Vector3d::UnitY());
-    glRotated(aa.angle(), aa.axis().x(), aa.axis().y(), aa.axis().z());
+    
+    //Eigen::AngleAxisd aa(90.0, Eigen::Vector3d::UnitY());
+    Eigen::AngleAxisd aa;
+    aa = direction();
+    glRotated(aa.angle() * 180.0 / simCamera.pi, aa.axis().x(), aa.axis().y(), aa.axis().z());
     
     glBegin(GL_TRIANGLE_FAN);
     
@@ -141,6 +148,7 @@ void UKF::initializeMeasurementCovariance()
     }
     
     print("Measurement covariance:", measurementCovariance);
+    printf("\n");
 }
 
 void UKF::initializeStateAndCovariance()
@@ -150,18 +158,25 @@ void UKF::initializeStateAndCovariance()
     clear(state);
     state.segment(0, 3) = simCamera.getPosition();
     state.segment(3, 3) = simCamera.getVelocity();
+    Eigen::Quaterniond dir = simCamera.getDirection();
+    state[6] = dir.w();
+    state[7] = dir.x();
+    state[8] = dir.y();
+    state[9] = dir.z();
           
     Eigen::MatrixXd covariance;
     covariance.resize(state.rows(), state.rows());
     clear(covariance);
-    covariance(0,0) = 0.01;
+    covariance(0,0) = 0.01; // Position
     covariance(1,1) = 0.01;
     covariance(2,2) = 0.01;
-    covariance(3,3) = simCamera.accelerationNoiseVariance[0];
+    covariance(3,3) = simCamera.accelerationNoiseVariance[0]; // Velocity
     covariance(4,4) = simCamera.accelerationNoiseVariance[1];
     covariance(5,5) = simCamera.accelerationNoiseVariance[2];
-//    identity(covariance);
-//    covariance = 0.01 * covariance;
+    covariance(6,6) = 0.0001; //Direction
+    covariance(7,7) = 0.0001;
+    covariance(8,8) = 0.0001;
+    covariance(9,9) = 0.0001;
     
     for (int i=0; i<numLandmarks; i++)
     {
@@ -169,7 +184,7 @@ void UKF::initializeStateAndCovariance()
         position << state[0], state[1], state[2];
         
         Eigen::Matrix3d rotMat;
-        rotMat = simCamera.direction;
+        rotMat = dir;
         
         Eigen::Vector3d pixel;
         pixel = rotMat.transpose() * (scene.landmarks[i] - position); // Landmark in camera coordinates
@@ -192,10 +207,13 @@ void UKF::initializeStateAndCovariance()
         covariance = tmpCovariance;
         covariance(covariance.rows()-4, covariance.rows()-4) = simCamera.measurementNoiseVariance.x();
         covariance(covariance.rows()-3, covariance.rows()-3) = simCamera.measurementNoiseVariance.y();
-        covariance(covariance.rows()-2, covariance.rows()-2) = simCamera.measurementNoiseVariance.x(); //Actually focal length variance... but whatever
+        covariance(covariance.rows()-2, covariance.rows()-2) = focalLengthVariance;
         covariance(covariance.rows()-1, covariance.rows()-1) = inverseDepthVariance;
     }
-    unscentedTransform(state, covariance, &UKF::addLandmark);
+    if (numLandmarks > 0)
+    {
+        unscentedTransform(state, covariance, &UKF::addLandmark);
+    }
     
     stateVector.resize(state.rows());
     stateVector = state;
@@ -204,25 +222,26 @@ void UKF::initializeStateAndCovariance()
     stateCovariance = covariance;
     
     print("State:", stateVector);
+    printf("\n");
     print("Covariance:", stateCovariance);
+    printf("\n");
 }
 
 void UKF::initializeProcessCovariance()
 {
-    
-//    processCovariance.resize(3 + numLandmarks, 3 + numLandmarks);
-    processCovariance.resize(3, 3);
+    processCovariance.resize(6, 6);
     clear(processCovariance);
-    processCovariance(0,0) = simCamera.accelerationNoiseVariance[0];
+    
+    processCovariance(0,0) = simCamera.accelerationNoiseVariance[0]; // Acceleration Noise
     processCovariance(1,1) = simCamera.accelerationNoiseVariance[1];
     processCovariance(2,2) = simCamera.accelerationNoiseVariance[2];
     
-//    for (int i=3; i<processCovariance.rows(); i++)
-//    {
-//        processCovariance(i,i) = inverseDepthVariance;
-//    }
+    processCovariance(3,3) = simCamera.angVelocityNoiseVariance[0]; // Angular Velocity Noise
+    processCovariance(4,4) = simCamera.angVelocityNoiseVariance[1];
+    processCovariance(5,5) = simCamera.angVelocityNoiseVariance[2];
     
     print("Process Covariance:", processCovariance);
+    printf("\n");
 }
 
 int UKF::getLandmarkIndex(int i)
@@ -317,6 +336,17 @@ void UKF::cleanCovariance()
    }
 }
 
+void UKF::normalizeDirection()
+{
+  Eigen::Quaterniond dir(stateVector[6], stateVector[7], stateVector[8], stateVector[9]);
+  dir.normalize();
+  
+  stateVector[6] = dir.w();
+  stateVector[7] = dir.x();
+  stateVector[8] = dir.y();
+  stateVector[9] = dir.z();
+}
+
 void UKF::augmentStateVector()
 {
     stateVector.conservativeResize(stateVector.rows() + cameraNoiseSize + numLandmarks);
@@ -360,7 +390,7 @@ void UKF::processUpdate(double deltaT)
 /////////////////////////////////////////////////////////////////////////////////////////////
 //                           PROCESS UPDATE WITH CONTROL
 /////////////////////////////////////////////////////////////////////////////////////////////
-void UKF::processUpdate(double deltaT, Eigen::Vector3d control)
+void UKF::processUpdate(double deltaT, Eigen::VectorXd control)
 {
     int tmpStateSize = stateVector.rows();
     augmentStateVector();
@@ -376,6 +406,8 @@ void UKF::processUpdate(double deltaT, Eigen::Vector3d control)
     {
         sigmaPoints[i].conservativeResize(tmpStateSize);
     }  
+    
+    normalizeDirection();
     
     generateSigmaPoints(stateVector, stateCovariance, sigmaPoints);
     
@@ -420,7 +452,7 @@ void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT)
     }
 }
 
-void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::Vector3d control)
+void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::VectorXd control)
 {
     Eigen::Vector3d position;
     position[0] = sigmaPoint[0];
@@ -430,17 +462,29 @@ void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::Vec
     Eigen::Vector3d velocity;
     velocity[0] = sigmaPoint[3];
     velocity[1] = sigmaPoint[4];
-    velocity[2] = sigmaPoint[5];    
+    velocity[2] = sigmaPoint[5];
+    
+    Eigen::Quaterniond direction(sigmaPoint[6], sigmaPoint[7], sigmaPoint[8], sigmaPoint[9]);
 
     Eigen::Vector3d accelerationNoise;
     accelerationNoise[0] = sigmaPoint[stateSize];
     accelerationNoise[1] = sigmaPoint[stateSize+1];
     accelerationNoise[2] = sigmaPoint[stateSize+2];
     
-    Eigen::Vector3d timeSliceVelocity = (control + accelerationNoise) * deltaT;
+    Eigen::Vector3d angVelocityNoise;
+    angVelocityNoise[0] = sigmaPoint[stateSize + 3];
+    angVelocityNoise[1] = sigmaPoint[stateSize + 4];
+    angVelocityNoise[2] = sigmaPoint[stateSize + 5];
     
+    Eigen::Vector3d accControl = control.segment(0, 3);
+    Eigen::Vector3d angVelocityControl = control.segment(3,3);
+    
+    Eigen::Vector3d timeSliceVelocity = (accControl + accelerationNoise) * deltaT;
     position = position + (velocity + timeSliceVelocity) * deltaT;
     velocity = velocity + timeSliceVelocity;
+    
+    // Compute new direction
+    direction = getQuaternionFromAngVelocity(angVelocityControl, deltaT) * direction;
     
     // Put process results back into the sigma point.
     sigmaPoint[0] = position.x();
@@ -449,6 +493,10 @@ void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::Vec
     sigmaPoint[3] = velocity.x();
     sigmaPoint[4] = velocity.y();
     sigmaPoint[5] = velocity.z();
+    sigmaPoint[6] = direction.w();
+    sigmaPoint[7] = direction.x();
+    sigmaPoint[8] = direction.y();
+    sigmaPoint[9] = direction.z();
     
 //    for (int i=0; i<numLandmarks; i++)
 //    {
@@ -460,7 +508,6 @@ void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::Vec
 
 void UKF::predictMeasurements()
 {
-    
     predictedMeasurements.clear();    
     for (int i=0; i<sigmaPoints.size(); i++)
     {
@@ -509,10 +556,11 @@ bool UKF::measureLandmarks(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measurem
         origin[0] = sigmaPoint[index];
         origin[1] = sigmaPoint[index + 1];
         origin[2] = sigmaPoint[index + 2];
-        direction[0] = sigmaPoint[index+3];
-        direction[1] = sigmaPoint[index+4];
-        direction[2] = sigmaPoint[index+5];
-        inverseDepth = sigmaPoint[index+6];
+        double theta, phi;
+        theta = sigmaPoint[index + 3];
+        phi     = sigmaPoint[index + 4];
+        direction = getDirectionFromAngles(theta, phi);
+        inverseDepth = sigmaPoint[index+5];
         //printf("------Sigma Point ------\n");
         //std::cout << sigmaPoint << std::endl << std::endl;
         
@@ -526,7 +574,9 @@ bool UKF::measureLandmarks(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measurem
         }
         
         Eigen::Matrix3d rotMat;
-        rotMat = simCamera.direction;
+        Eigen::Quaterniond direction(sigmaPoint[6], sigmaPoint[7], sigmaPoint[8], sigmaPoint[9]);
+        rotMat = direction;
+        //rotMat = simCamera.direction;
         
         Eigen::Vector3d pixel;
         pixel = rotMat.transpose() * (euclideanLandmark - position()); // Landmark in camera coordinates
@@ -594,6 +644,8 @@ void UKF::measurementUpdate(Eigen::VectorXd measurement)
 //    printf("New Position: (%.20f, %.20f %.20f)\n", stateVector[0], stateVector[1], stateVector[2]);
 //    printf("\n");
     
+    normalizeDirection();
+    
     stateCovariance = stateCovariance - (K * Pzz * K.transpose());
     //print("Filtered State Covariance:", stateCovariance);
 }
@@ -609,14 +661,50 @@ Eigen::Vector3d UKF::getEuclideanLandmark(int index)
     origin[0] = stateVector[i];
     origin[1] = stateVector[i+1];
     origin[2] = stateVector[i+2];
-    direction[0] = stateVector[i+3];
-    direction[1] = stateVector[i+4];
-    direction[2] = stateVector[i+5];
-    inverseDepth = stateVector[i+6];
+    double theta, phi;
+    theta = stateVector[i+3];
+    phi     = stateVector[i+4];
+    direction = getDirectionFromAngles(theta, phi);
+    inverseDepth = stateVector[i+5];
 
     Eigen::Vector3d euclideanLandmark = origin + ((1.0/inverseDepth) * direction);
     
     return euclideanLandmark;
+}
+
+void UKF::getAnglesFromDirection(Eigen::Vector3d direction, double &theta, double &phi)
+{
+    double x = direction.x();
+    double y = direction.y();
+    double z = direction.z();
+    
+    phi = std::atan2(-y, std::sqrt(x * x + z * z));
+    theta = std::atan2(x, z);
+}
+
+Eigen::Vector3d UKF::getDirectionFromAngles(double theta, double phi)
+{
+    Eigen::Vector3d direction;
+    direction[0] = std::cos(phi) * std::sin(theta);
+    direction[1] = -1.0 * std::sin(phi);
+    direction[2] = std::cos(phi) * std::cos(theta);
+    
+    return direction;
+}
+
+Eigen::Quaterniond UKF::getQuaternionFromAngVelocity(Eigen::Vector3d angVelocity, double deltaT)
+{
+    double angMag = std::sqrt(angVelocity.x() * angVelocity.x() + angVelocity.y() * angVelocity.y() + angVelocity.z() * angVelocity.z());
+    double theta = 0.5 * angMag * deltaT;
+    double w,x,y,z;
+    w = std::cos(theta);
+    double s = sinc(theta)*0.5*deltaT;
+    x = angVelocity.x() * s;
+    y = angVelocity.y() * s;
+    z = angVelocity.z() * s;
+    Eigen::Quaterniond angQuat(w, x, y, z);
+    
+    return angQuat;
 }
 
 void UKF::unscentedTransform(Eigen::VectorXd& state, Eigen::MatrixXd& covariance, void (UKF::*process)(Eigen::VectorXd&))
@@ -687,7 +775,7 @@ void UKF::unscentedTransform(Eigen::VectorXd& state, Eigen::MatrixXd& covariance
     }
 }
 
-void UKF::unscentedTransform(Eigen::VectorXd& state, Eigen::MatrixXd& covariance, void (UKF::*process)(Eigen::VectorXd&, double, Eigen::Vector3d), double deltaT, Eigen::Vector3d control)
+void UKF::unscentedTransform(Eigen::VectorXd& state, Eigen::MatrixXd& covariance, void (UKF::*process)(Eigen::VectorXd&, double, Eigen::VectorXd), double deltaT, Eigen::VectorXd control)
 {
     //std::vector<Eigen::VectorXd, Eigen::aligned_allocator<Eigen::VectorXd> > sigPoints;
     generateSigmaPoints(state, covariance, sigmaPoints);
@@ -723,35 +811,42 @@ void UKF::unscentedTransform(Eigen::VectorXd& state, Eigen::MatrixXd& covariance
 
 void UKF::addLandmark(Eigen::VectorXd& sigmaPoint)
 {
+    int inLandmarkSize = 4; // u, v, focal length, inverse depth
+    int outLandmarkSize = 6; // origin (3), theta, phi, inverse depth
+    
     Eigen::VectorXd outState(sigmaPoint.rows());
     outState = sigmaPoint;
-    outState.conservativeResize(sigmaPoint.rows() + 3 * numLandmarks);
+    outState.conservativeResize(sigmaPoint.rows() + (outLandmarkSize - inLandmarkSize) * numLandmarks);
     
     //print("state in:", sigmaPoint);
     Eigen::Vector3d origin;
     origin << sigmaPoint[0], sigmaPoint[1], sigmaPoint[2];
-    
+        
     for (int i=0; i<numLandmarks; i++)
     {
-        int inIndex = 6 + i * 4;
-        int outIndex = 6 + i * 7;
+        int inIndex = deviceStateSize + i * inLandmarkSize;
+        int outIndex = deviceStateSize + i * outLandmarkSize;
         Eigen::Vector3d direction;
         direction << sigmaPoint[inIndex], sigmaPoint[inIndex + 1], sigmaPoint[inIndex + 2];
         
         Eigen::Matrix3d rotMat;
         rotMat = simCamera.direction;
         direction = rotMat * direction;
-        direction.normalize();
+        //direction.normalize();
+        
+        double theta, phi;
+        getAnglesFromDirection(direction, theta, phi);
+        
         double inverseDepth = sigmaPoint[inIndex + 3];
         
         outState.segment(outIndex, 3) = origin;
-        outState.segment(outIndex + 3, 3) = direction;
-        outState[outIndex + 6] = inverseDepth;
+        outState[outIndex + 3] = theta;
+        outState[outIndex + 4] = phi;
+        outState[outIndex + 5] = inverseDepth;
     }
     
     sigmaPoint.resize(outState.rows());
     sigmaPoint = outState;
-    
     
 //    Eigen::Vector3d direction;
 //    direction << sigmaPoint[sigmaPoint.rows()-4], sigmaPoint[sigmaPoint.rows()-3], sigmaPoint[sigmaPoint.rows()-2];

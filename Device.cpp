@@ -7,11 +7,13 @@ Device::Device(){}
 Device::Device(SimScene simScene)
 {    
     measurementNoiseMean << 0.0, 0.0, 0.0;
-    measurementNoiseVariance << 0.0001, 0.0001, 0.0001;
+    measurementNoiseVariance << 0.00001, 0.00001, 0.00001;
     
     accelerationNoiseMean << 0.0, 0.0, 0.0;
     accelerationNoiseVariance << 0.001, 0.001, 0.001;
     
+    angVelocityNoiseMean << 0.0, 0.0, 0.0;
+    angVelocityNoiseVariance << 0.001, 0.001, 0.001;
     
     Eigen::AngleAxisd aa(pi / 2.0, Eigen::Vector3d::UnitY());
     direction = aa;
@@ -20,8 +22,9 @@ Device::Device(SimScene simScene)
                                                      0.0, defaultFocalLength, 0.0,
                                                      0.0, 0.0, 1.0;
      
+    //defaultTimeStep = 0.033;
     defaultTimeStep = 0.033;
-    sizeScale = 100;
+    sizeScale = 50;
     
     reset();
 }
@@ -35,6 +38,10 @@ void Device::reset()
 void Device::timeStep()
 {
     currTime += defaultTimeStep;
+    if (currTime >= 2.0 * pi)
+    {
+        currTime -= 2.0 * pi;
+    }
 }
 
  void Device::addNoise(Eigen::Vector3d& vec, Eigen::Vector3d noiseMean, Eigen::Vector3d noiseVariance)
@@ -48,12 +55,20 @@ void Device::timeStep()
     vec[2] = vec[2] + noiseZ;
 }
 
- Eigen::Vector3d Device::control()
+ Eigen::VectorXd Device::control()
  {
-//     Eigen::Vector3d acceleration = getAcceleration();
-//     addNoise(acceleration, accelerationNoiseMean, accelerationNoiseVariance);
-//     return acceleration;
-     return getAcceleration();
+     Eigen::Vector3d acceleration = getAcceleration();
+     addNoise(acceleration, accelerationNoiseMean, accelerationNoiseVariance);
+     Eigen::Vector3d angVelocity = getAngularVelocity();
+     addNoise(angVelocity, accelerationNoiseMean, accelerationNoiseVariance);
+     
+     Eigen::VectorXd control;
+     control.resize(acceleration.rows() + angVelocity.rows());
+     
+     control.segment(0, acceleration.rows()) = acceleration;
+     control.segment(3, angVelocity.rows()) = angVelocity;
+     
+     return control;
  }
  
 Eigen::VectorXd Device::measure(SimScene simScene)
@@ -67,7 +82,7 @@ Eigen::VectorXd Device::measure(SimScene simScene)
         landmark << simScene.landmarks[i].x(), simScene.landmarks[i].y(), simScene.landmarks[i].z();
         
         Eigen::Matrix3d rotMat;
-        rotMat = direction;
+        rotMat = getDirection();
         
         Eigen::Vector3d pixel;
         pixel = rotMat.transpose() * (landmark - getPosition()); // Landmark in camera coordinates
@@ -81,8 +96,11 @@ Eigen::VectorXd Device::measure(SimScene simScene)
         observations[j] = pixel.x();
         observations[j+1] = pixel.y();
     }
-    //printf("Observations:\n");
-    //std::cout << observations << std::endl;
+    
+    // Add quaternion of direction
+//    observations.conservativeResize(observations.rows() + 4);
+//    observations[observations.rows() - 4] = direction
+    
     return observations;
 }
 
@@ -111,7 +129,32 @@ Eigen::Vector3d Device::getAcceleration()
 
 Eigen::Quaterniond Device::getDirection()
 {
+    Eigen::Vector3d angVelocity = getAngularVelocity();
+    double angMag = std::sqrt(angVelocity.x() * angVelocity.x() + angVelocity.y() * angVelocity.y() + angVelocity.z() * angVelocity.z());
+    double theta = 0.5 * angMag * currTime;
     
+    double w,x,y,z;
+    w = std::cos(theta);
+    double s = sinc(theta)*0.5*currTime;
+    x = angVelocity.x() * s;
+    y = angVelocity.y() * s;
+    z = angVelocity.z() * s;
+    Eigen::Quaterniond angQuat(w, x, y, z);
+    
+    return angQuat * direction;
+    
+    //return direction;
+}
+
+Eigen::Vector3d Device::getAngularVelocity()
+{
+    Eigen::Vector3d angVelocity;
+    //angVelocity[0] = -2.0 * pi;
+    angVelocity[0] = -1.0;
+    angVelocity[1] = 0.0;
+    angVelocity[2] = 0.0;
+    
+    return angVelocity;
 }
 
 void Device::draw()
@@ -120,7 +163,8 @@ void Device::draw()
     
     glTranslated(getPosition()[0], getPosition()[1], getPosition()[2]);
     Eigen::AngleAxisd aa;
-    aa = direction;
+    //aa = direction;
+    aa = getDirection();
     
     glRotated(aa.angle() * 180.0 / pi, aa.axis().x(), aa.axis().y(), aa.axis().z());
     

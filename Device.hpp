@@ -36,6 +36,7 @@ public:
     Eigen::Vector3d getVelocity();
     Eigen::Vector3d getAcceleration();
     Eigen::Quaterniond getDirection();
+    Eigen::Vector3d getAngularVelocity();
     
     void draw();
     void drawVelocity();
@@ -44,7 +45,7 @@ public:
     
     std::vector<Landmark> map;
     
-    Eigen::Vector3d control();
+    Eigen::VectorXd control();
     Eigen::VectorXd measure(SimScene simScene);
     
     void addNoise(Eigen::Vector3d& vec, Eigen::Vector3d noiseMean, Eigen::Vector3d noiseVariance);
@@ -67,6 +68,9 @@ public:
     
     Eigen::Vector3d accelerationNoiseMean;
     Eigen::Vector3d accelerationNoiseVariance;
+    
+    Eigen::Vector3d angVelocityNoiseMean;
+    Eigen::Vector3d angVelocityNoiseVariance;    
 };
 
 #endif	/* SIMCAMERA_HPP */

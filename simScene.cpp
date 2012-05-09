@@ -2,20 +2,21 @@
 
 SimScene::SimScene()
 {
-//    landmarks.push_back(Eigen::Vector3d (90.0, 100.0, 0.0));
-//    
+    //landmarks.push_back(Eigen::Vector3d (120.0, 0.0, 100.0));
+//    landmarks.push_back(Eigen::Vector3d (120.0, 0.0, 50.0));
+////    
 //    landmarks.push_back(Eigen::Vector3d (80.0, 100.0, 0.0));
 //    landmarks.push_back(Eigen::Vector3d (70.0, 100.0, 0.0));
 //    landmarks.push_back(Eigen::Vector3d (60.0, 100.0, 0.0));
 //    landmarks.push_back(Eigen::Vector3d (50.0, 100.0, 0.0));
-//    
+////    
 //    landmarks.push_back(Eigen::Vector3d (100.0, 100.0, 0.0));
 //    landmarks.push_back(Eigen::Vector3d (100.0, 90.0, 0.0));
 //    landmarks.push_back(Eigen::Vector3d (100.0, 80.0, 0.0));
 //    landmarks.push_back(Eigen::Vector3d (100.0, 70.0, 0.0));
 //    landmarks.push_back(Eigen::Vector3d (100.0, 50.0, 0.0));
-//    landmarks.push_back(Eigen::Vector3d (100.0, 60.0, 0.0));
-//    landmarks.push_back(Eigen::Vector3d (100.0, 40.0, 0.0));
+//    landmarks.push_back(Eigen::Vector3d (100.0, 60.0, 0.0)); //NO MOVEMENT WITH THIS MANY 12
+//    landmarks.push_back(Eigen::Vector3d (100.0, 40.0, 0.0)); // MOVEMENT!
 //    landmarks.push_back(Eigen::Vector3d (100.0, 30.0, 0.0));
 //    landmarks.push_back(Eigen::Vector3d (100.0, 20.0, 0.0));
 //    
@@ -25,8 +26,8 @@ SimScene::SimScene()
 //    landmarks.push_back(Eigen::Vector3d (70.0, 10.0, 0.0));
 //    landmarks.push_back(Eigen::Vector3d (60.0, 10.0, 0.0));
 //    landmarks.push_back(Eigen::Vector3d (50.0, 10.0, 0.0));
-
-    // 3D Example
+//
+//    // 3D Example
 //    landmarks.push_back(Eigen::Vector3d (100.0, 0.0, -100.0));
 //    landmarks.push_back(Eigen::Vector3d (100.0, 150.0, 0.0));
 //    landmarks.push_back(Eigen::Vector3d (100.0, 0.0, 100.0));
@@ -34,24 +35,57 @@ SimScene::SimScene()
 //    landmarks.push_back(Eigen::Vector3d (100.0, 100.0, -100.0));
 //    landmarks.push_back(Eigen::Vector3d (100.0, 50.0, 0.0));
 //    landmarks.push_back(Eigen::Vector3d (100.0, 100.0, 100.0));
-    
-    //landmarks.push_back(Eigen::Vector3d (100.0, 0.0, 100.0));
-    
-//    // Board
-    int height = 4;
-    int width = 4;
-    double space = 10;
+//    
+//    landmarks.push_back(Eigen::Vector3d (100.0, 0.0, 100.0));
+//    
+    // CUBE
+    int width, height, depth;
+    double space = 50;
+    width = 3;
+    height = 3;
+    depth = 3;
+
     Eigen::Vector3d origin;
-    origin << 200.0, -30.0, -30.0;
+    origin << 100.0, -space * (height - 1) / 2.0, -space * (depth - 1) / 2.0;
     
-    for (int row = 0; row < height; row++)
+
+    for (int x=0; x<width; x++)
     {
-        for (int col = 0; col < width; col++)
+        for (int y=0; y<height; y++)
         {
-            landmarks.push_back(Eigen::Vector3d(origin.x(), col * space + origin.y(), row * space + origin.z()));
+            for (int z=0; z<depth; z++)
+            {
+                landmarks.push_back(Eigen::Vector3d(origin.x() + x * space, origin.y() + y * space, origin.z() + z * space));
+            }
         }
     }
     
+//    // Board
+//    int height = 2;
+//    int width = 2;
+//    double space = 10;
+//    Eigen::Vector3d origin;
+//    origin << 200.0, -30.0, -30.0;
+//    
+//    for (int row = 0; row < height; row++)
+//    {
+//        for (int col = 0; col < width; col++)
+//        {
+//            landmarks.push_back(Eigen::Vector3d(origin.x(), col * space + origin.y(), row * space + origin.z()));
+//        }
+//    }
+//    
+//        height = 2;
+//    width =2;    
+//    origin << 100.0, 100.0, 100.0;
+//    for (int row = 0; row < height; row++)
+//    {
+//        for (int col = 0; col < width; col++)
+//        {
+//            landmarks.push_back(Eigen::Vector3d(origin.x(), col * space + origin.y(), row * space + origin.z()));
+//        }
+//    }
+//    
 //    height = 2;
 //    width =2;    
 //    origin << 300.0, 50.0, -50.0;
@@ -95,7 +129,7 @@ SimScene::SimScene()
 //            landmarks.push_back(Eigen::Vector3d(origin.x(), col * space + origin.y(), row * space + origin.z()));
 //        }
 //    }
-//    
+    
     
 }
 
