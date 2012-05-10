@@ -158,7 +158,7 @@ void UKF::initializeStateAndCovariance()
     clear(state);
     state.segment(0, 3) = simCamera.getPosition();
     state.segment(3, 3) = simCamera.getVelocity();
-    Eigen::Quaterniond dir = simCamera.getDirection();
+    Eigen::Quaterniond dir = simCamera.getImuDirection();
     state[6] = dir.w();
     state[7] = dir.x();
     state[8] = dir.y();
@@ -229,7 +229,7 @@ void UKF::initializeStateAndCovariance()
 
 void UKF::initializeProcessCovariance()
 {
-    processCovariance.resize(6, 6);
+    processCovariance.resize(processNoiseSize, processNoiseSize);
     clear(processCovariance);
     
     processCovariance(0,0) = simCamera.accelerationNoiseVariance[0]; // Acceleration Noise
@@ -239,6 +239,10 @@ void UKF::initializeProcessCovariance()
     processCovariance(3,3) = simCamera.angVelocityNoiseVariance[0]; // Angular Velocity Noise
     processCovariance(4,4) = simCamera.angVelocityNoiseVariance[1];
     processCovariance(5,5) = simCamera.angVelocityNoiseVariance[2];
+    
+    processCovariance(6,6) = 1.0; // Position noise
+    processCovariance(7,7) = 1.0;
+    processCovariance(8,8) = 1.0;
     
     print("Process Covariance:", processCovariance);
     printf("\n");
@@ -349,7 +353,7 @@ void UKF::normalizeDirection()
 
 void UKF::augmentStateVector()
 {
-    stateVector.conservativeResize(stateVector.rows() + cameraNoiseSize + numLandmarks);
+    stateVector.conservativeResize(stateVector.rows() + processNoiseSize);
     //Reset all noise to 0 in State
     for (int i=stateSize; i<stateVector.rows(); i++)
     {
@@ -447,7 +451,7 @@ void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT)
     for (int i=0; i<numLandmarks; i++)
     {
         int inverseDepthIndex = getLandmarkIndex(i) + 6;
-        double inverseDepthNoise = sigmaPoint(stateSize + cameraNoiseSize + i); // Gets the ith landmark's noise
+        double inverseDepthNoise = sigmaPoint(stateSize + processNoiseSize + i); // Gets the ith landmark's noise
         sigmaPoint[inverseDepthIndex] = sigmaPoint[inverseDepthIndex] + inverseDepthNoise;
     }
 }
@@ -486,6 +490,11 @@ void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::Vec
     // Compute new direction
     direction = getQuaternionFromAngVelocity(angVelocityControl, deltaT) * direction;
     
+    // Add noise to position in an attempt to negate translation drift
+    Eigen::Vector3d positionNoise;
+    positionNoise << sigmaPoint[sigmaPoint.rows()-3], sigmaPoint[sigmaPoint.rows()-2], sigmaPoint[sigmaPoint.rows()-1];
+    position = position + positionNoise;
+    
     // Put process results back into the sigma point.
     sigmaPoint[0] = position.x();
     sigmaPoint[1] = position.y();
@@ -497,13 +506,6 @@ void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::Vec
     sigmaPoint[7] = direction.x();
     sigmaPoint[8] = direction.y();
     sigmaPoint[9] = direction.z();
-    
-//    for (int i=0; i<numLandmarks; i++)
-//    {
-//        int inverseDepthIndex = getLandmarkIndex(i) + 6;
-//        double inverseDepthNoise = sigmaPoint(stateSize + cameraNoiseSize + i); // Gets the ith landmark's noise
-//        sigmaPoint[inverseDepthIndex] = sigmaPoint[inverseDepthIndex] + inverseDepthNoise;
-//    }
 }
 
 void UKF::predictMeasurements()
@@ -821,21 +823,23 @@ void UKF::addLandmark(Eigen::VectorXd& sigmaPoint)
     //print("state in:", sigmaPoint);
     Eigen::Vector3d origin;
     origin << sigmaPoint[0], sigmaPoint[1], sigmaPoint[2];
+    
+    Eigen::Quaterniond camDirection(sigmaPoint[6], sigmaPoint[7], sigmaPoint[8], sigmaPoint[9]);
         
     for (int i=0; i<numLandmarks; i++)
     {
         int inIndex = deviceStateSize + i * inLandmarkSize;
         int outIndex = deviceStateSize + i * outLandmarkSize;
-        Eigen::Vector3d direction;
-        direction << sigmaPoint[inIndex], sigmaPoint[inIndex + 1], sigmaPoint[inIndex + 2];
+        Eigen::Vector3d landmarkDirection;
+        landmarkDirection << sigmaPoint[inIndex], sigmaPoint[inIndex + 1], sigmaPoint[inIndex + 2];
         
         Eigen::Matrix3d rotMat;
-        rotMat = simCamera.direction;
-        direction = rotMat * direction;
-        //direction.normalize();
+        //rotMat = simCamera.initialImuDirection;
+        rotMat = camDirection;
+        landmarkDirection = rotMat * landmarkDirection;
         
         double theta, phi;
-        getAnglesFromDirection(direction, theta, phi);
+        getAnglesFromDirection(landmarkDirection, theta, phi);
         
         double inverseDepth = sigmaPoint[inIndex + 3];
         
@@ -847,21 +851,4 @@ void UKF::addLandmark(Eigen::VectorXd& sigmaPoint)
     
     sigmaPoint.resize(outState.rows());
     sigmaPoint = outState;
-    
-//    Eigen::Vector3d direction;
-//    direction << sigmaPoint[sigmaPoint.rows()-4], sigmaPoint[sigmaPoint.rows()-3], sigmaPoint[sigmaPoint.rows()-2];
-//    
-//    Eigen::Matrix3d rotMat;
-//    rotMat = simCamera.direction;
-//    direction = rotMat * direction;
-//    direction.normalize();
-//    
-//    double inverseDepth = sigmaPoint[sigmaPoint.rows()-1];
-//    
-//    sigmaPoint.conservativeResize(sigmaPoint.rows() + 3);
-//    sigmaPoint.segment(sigmaPoint.rows() - 7, 3) = origin;
-//    sigmaPoint.segment(sigmaPoint.rows() - 4, 3) = direction;
-//    sigmaPoint[sigmaPoint.rows()-1] = inverseDepth;
-    //print("state out:", sigmaPoint);
-    //printf("\n");
 }

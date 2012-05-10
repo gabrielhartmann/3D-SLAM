@@ -16,7 +16,7 @@ Device::Device(SimScene simScene)
     angVelocityNoiseVariance << 0.001, 0.001, 0.001;
     
     Eigen::AngleAxisd aa(pi / 2.0, Eigen::Vector3d::UnitY());
-    direction = aa;
+    initialImuDirection = aa;
     defaultFocalLength = 1.0;
     intrinsicCalibrationMatrix << defaultFocalLength, 0.0, 0.0,
                                                      0.0, defaultFocalLength, 0.0,
@@ -82,7 +82,7 @@ Eigen::VectorXd Device::measure(SimScene simScene)
         landmark << simScene.landmarks[i].x(), simScene.landmarks[i].y(), simScene.landmarks[i].z();
         
         Eigen::Matrix3d rotMat;
-        rotMat = getDirection();
+        rotMat = getImuDirection();
         
         Eigen::Vector3d pixel;
         pixel = rotMat.transpose() * (landmark - getPosition()); // Landmark in camera coordinates
@@ -127,7 +127,7 @@ Eigen::Vector3d Device::getAcceleration()
     return acceleration;
 }
 
-Eigen::Quaterniond Device::getDirection()
+Eigen::Quaterniond Device::getImuDirection()
 {
     Eigen::Vector3d angVelocity = getAngularVelocity();
     double angMag = std::sqrt(angVelocity.x() * angVelocity.x() + angVelocity.y() * angVelocity.y() + angVelocity.z() * angVelocity.z());
@@ -141,9 +141,8 @@ Eigen::Quaterniond Device::getDirection()
     z = angVelocity.z() * s;
     Eigen::Quaterniond angQuat(w, x, y, z);
     
-    return angQuat * direction;
-    
-    //return direction;
+    return angQuat * initialImuDirection;
+
 }
 
 Eigen::Vector3d Device::getAngularVelocity()
@@ -164,7 +163,7 @@ void Device::draw()
     glTranslated(getPosition()[0], getPosition()[1], getPosition()[2]);
     Eigen::AngleAxisd aa;
     //aa = direction;
-    aa = getDirection();
+    aa = getImuDirection();
     
     glRotated(aa.angle() * 180.0 / pi, aa.axis().x(), aa.axis().y(), aa.axis().z());
     

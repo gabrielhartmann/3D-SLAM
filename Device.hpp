@@ -35,7 +35,7 @@ public:
     Eigen::Vector3d getPosition();
     Eigen::Vector3d getVelocity();
     Eigen::Vector3d getAcceleration();
-    Eigen::Quaterniond getDirection();
+    Eigen::Quaterniond getImuDirection();
     Eigen::Vector3d getAngularVelocity();
     
     void draw();
@@ -52,7 +52,7 @@ public:
         
     void initializeMap(SimScene simScene);
     
-    Eigen::Quaterniond direction;
+    Eigen::Quaterniond initialImuDirection;
     Eigen::Matrix3d intrinsicCalibrationMatrix;
     
     double currTime;

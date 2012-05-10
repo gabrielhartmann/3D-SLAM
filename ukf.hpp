@@ -36,9 +36,9 @@ public:
     
 private:
     int numLandmarks;
-    const static int deviceStateSize = 10;
-    const static int landmarkSize = 6;
-    const static int cameraNoiseSize = 6;
+    const static int deviceStateSize = 10; // position(3), velocity(3), imu direction (4)
+    const static int landmarkSize = 6; // origin(3), theta, phi, inverse dpeth
+    const static int processNoiseSize = 9; // translational accleration (3), angular velocity (3), position (3)
     const static double defaultDepth = 100.0;
     int stateSize;
     
