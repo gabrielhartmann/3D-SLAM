@@ -9,19 +9,19 @@ CND_DISTDIR=dist
 # Debug configuration
 CND_PLATFORM_Debug=GNU-Linux-x86
 CND_ARTIFACT_DIR_Debug=dist/Debug/GNU-Linux-x86
-CND_ARTIFACT_NAME_Debug=ukf_slam
-CND_ARTIFACT_PATH_Debug=dist/Debug/GNU-Linux-x86/ukf_slam
+CND_ARTIFACT_NAME_Debug=3d-slam
+CND_ARTIFACT_PATH_Debug=dist/Debug/GNU-Linux-x86/3d-slam
 CND_PACKAGE_DIR_Debug=dist/Debug/GNU-Linux-x86/package
-CND_PACKAGE_NAME_Debug=ukfslam.tar
-CND_PACKAGE_PATH_Debug=dist/Debug/GNU-Linux-x86/package/ukfslam.tar
+CND_PACKAGE_NAME_Debug=3d-slam.tar
+CND_PACKAGE_PATH_Debug=dist/Debug/GNU-Linux-x86/package/3d-slam.tar
 # Release configuration
 CND_PLATFORM_Release=GNU-Linux-x86
 CND_ARTIFACT_DIR_Release=dist/Release/GNU-Linux-x86
-CND_ARTIFACT_NAME_Release=ukf_slam
-CND_ARTIFACT_PATH_Release=dist/Release/GNU-Linux-x86/ukf_slam
+CND_ARTIFACT_NAME_Release=3d-slam
+CND_ARTIFACT_PATH_Release=dist/Release/GNU-Linux-x86/3d-slam
 CND_PACKAGE_DIR_Release=dist/Release/GNU-Linux-x86/package
-CND_PACKAGE_NAME_Release=ukfslam.tar
-CND_PACKAGE_PATH_Release=dist/Release/GNU-Linux-x86/package/ukfslam.tar
+CND_PACKAGE_NAME_Release=3d-slam.tar
+CND_PACKAGE_PATH_Release=dist/Release/GNU-Linux-x86/package/3d-slam.tar
 #
 # include compiler specific variables
 #

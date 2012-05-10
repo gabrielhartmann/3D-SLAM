@@ -67,11 +67,11 @@ LDLIBSOPTIONS=
 
 # Build Targets
 .build-conf: ${BUILD_SUBPROJECTS}
-	"${MAKE}"  -f nbproject/Makefile-${CND_CONF}.mk ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/ukf_slam
+	"${MAKE}"  -f nbproject/Makefile-${CND_CONF}.mk ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/3d-slam
 
-${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/ukf_slam: ${OBJECTFILES}
+${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/3d-slam: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
-	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/ukf_slam ${OBJECTFILES} ${LDLIBSOPTIONS} 
+	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/3d-slam ${OBJECTFILES} ${LDLIBSOPTIONS} 
 
 ${OBJECTDIR}/ukf.o: ukf.cpp 
 	${MKDIR} -p ${OBJECTDIR}
@@ -144,7 +144,7 @@ ${OBJECTDIR}/landmark.o: landmark.cpp
 # Clean Targets
 .clean-conf: ${CLEAN_SUBPROJECTS}
 	${RM} -r ${CND_BUILDDIR}/${CND_CONF}
-	${RM} ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/ukf_slam
+	${RM} ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/3d-slam
 
 # Subprojects
 .clean-subprojects:
