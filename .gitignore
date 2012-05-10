@@ -1,4 +1,7 @@
 *.mk
 *.bash
 *.o
+<<<<<<< HEAD
 /.git-rewrite/
+=======
+>>>>>>> ea97b4de62af7d1945600cf6825fc2308fd8769b
