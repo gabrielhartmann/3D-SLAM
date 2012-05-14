@@ -21,7 +21,7 @@ void UKF::initialize()
     //alpha = 0.001;
     alpha = 0.001;
     //beta = 2.0;
-    beta = 3.0;
+    beta = 2.0;
 
     lmIndex.clear();
     
@@ -170,7 +170,8 @@ void UKF::initializeStateAndCovariance()
     covariance(9,9) = 0.0001;
     
     Measurement m = simCamera.measure();
-    for (int i=0; i<numLandmarks; i++)
+    std::vector<int> tags = m.getTags();
+    for (int i=0; i<tags.size(); i++)
     {
         Eigen::Vector3d position;
         position << state[0], state[1], state[2];
@@ -178,16 +179,11 @@ void UKF::initializeStateAndCovariance()
         Eigen::Matrix3d rotMat;
         rotMat = dir;
         
-        Eigen::Vector3d pixel;
-        pixel = rotMat.transpose() * (scene.landmarks[i] - position); // Landmark in camera coordinates
-        pixel[0] = pixel.x() / pixel.z();
-        pixel[1] = pixel.y() / pixel.z();
-        pixel[2] = 1.0;
-        pixel = simCamera.intrinsicCalibrationMatrix * pixel; //Projected landmark
+        std::vector<double> pixel = m.getObservation(tags[i]);
         
         state.conservativeResize(state.rows() + 4);
-        state[state.rows()-4] = pixel.x();
-        state[state.rows()-3] = pixel.y();
+        state[state.rows()-4] = pixel[0];
+        state[state.rows()-3] = pixel[1];
         state[state.rows()-2] = simCamera.defaultFocalLength;
         state[state.rows()-1] = 1.0 / defaultDepth;
         
