@@ -222,17 +222,13 @@ void UKF::initializeProcessCovariance()
     processCovariance.resize(processNoiseSize, processNoiseSize);
     clear(processCovariance);
     
-    processCovariance(0,0) = simCamera.accelerationNoiseVariance[0]; // Acceleration Noise
+    processCovariance(0,0) = simCamera.accelerationNoiseVariance[0] ; // Acceleration Noise
     processCovariance(1,1) = simCamera.accelerationNoiseVariance[1];
     processCovariance(2,2) = simCamera.accelerationNoiseVariance[2];
     
     processCovariance(3,3) = simCamera.angVelocityNoiseVariance[0]; // Angular Velocity Noise
     processCovariance(4,4) = simCamera.angVelocityNoiseVariance[1];
     processCovariance(5,5) = simCamera.angVelocityNoiseVariance[2];
-    
-    processCovariance(6,6) = 1.0; // Position noise
-    processCovariance(7,7) = 1.0;
-    processCovariance(8,8) = 1.0;
     
     print("Process Covariance:", processCovariance);
     printf("\n");
@@ -423,12 +419,7 @@ void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::Vec
     
     // Compute new direction
     direction = getQuaternionFromAngVelocity(angVelocityControl, deltaT) * direction;
-    
-    // Add noise to position in an attempt to negate translation drift
-    Eigen::Vector3d positionNoise;
-    positionNoise << sigmaPoint[sigmaPoint.rows()-3], sigmaPoint[sigmaPoint.rows()-2], sigmaPoint[sigmaPoint.rows()-1];
-    position = position + positionNoise;
-    
+     
     // Put process results back into the sigma point.
     sigmaPoint[0] = position.x();
     sigmaPoint[1] = position.y();
@@ -444,11 +435,26 @@ void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::Vec
 
 void UKF::predictMeasurements(Measurement actualMeasurement)
 {
-    predictedMeasurements.clear();
+    std::vector<Measurement> ms;   
     for (int i=0; i<sigmaPoints.size(); i++)
     {
         Measurement m = predictMeasurement(sigmaPoints[i]);
-        predictedMeasurements.push_back(m.toVector());
+        ms.push_back(m);
+    }
+    
+    // Find common landmark tags for all sigma point predictions
+    std::vector<int> cTags = commonTags(ms);
+    cTags = commonTags(cTags, actualMeasurement);
+    for (int i=0; i<cTags.size(); i++)
+    {
+        printf("%d ", cTags[i]);
+    }
+    printf("\n");
+    
+    predictedMeasurements.clear();
+    for (int i=0; i<sigmaPoints.size(); i++)
+    {
+        predictedMeasurements.push_back(ms[i].toVector());
     }
     
     double N = (sigmaPoints.size() - 1) / 2.0;
@@ -574,7 +580,6 @@ void UKF::measurementUpdate(Measurement m)
     predictMeasurements(m);
     
     Eigen::VectorXd tmpState(stateVector.rows());
-    //Eigen::VectorXd tmpMeasurement(stateVector.rows());
     Eigen::VectorXd tmpMeasurement(aPrioriMeasurementsMean.rows());
     
     double N = (sigmaPoints.size() - 1.0) / 2.0;

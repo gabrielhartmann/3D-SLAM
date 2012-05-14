@@ -13,6 +13,9 @@
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Geometry>
 #include <string>
+#include <vector>
+
+#include "Measurement.hpp"
 
 using namespace std;
 
@@ -60,6 +63,8 @@ inline int imax(int a, int b){ return (a>b)?a:b; }
 inline int imin(int a, int b){ return (a<b)?a:b; }
 double sinc(double x);
 bool visible(Eigen::Vector3d position, Eigen::Quaterniond direction, double fov, Eigen::Vector3d lm);
+std::vector<int> commonTags(std::vector<Measurement> ms);
+std::vector<int> commonTags(std::vector<int> tags, Measurement m);
 
 ///////////////////////////////////
 //    input/output utilities     //

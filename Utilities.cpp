@@ -319,3 +319,31 @@ bool visible(Eigen::Vector3d position, Eigen::Quaterniond direction, double fov,
     
     return false;
 }
+
+std::vector<int> commonTags(std::vector<Measurement> ms)
+{
+    // Initialize tag list
+    std::vector<int> cTags = ms[0].getTags();
+    
+    for (int i=1; i<ms.size(); i++)
+    {
+        cTags = commonTags(cTags, ms[i]);
+    }
+    
+    return cTags;
+}
+
+std::vector<int> commonTags(std::vector<int> tags, Measurement m)
+{
+    std::vector<int> cTags;
+    
+    for (int i=0; i<tags.size(); i++)
+    {
+        if (m.contains(tags[i]))
+        {
+            cTags.push_back(tags[i]);
+        }
+    }
+    
+    return cTags;
+}
