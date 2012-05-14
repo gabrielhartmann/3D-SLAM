@@ -9,8 +9,11 @@
 #define	MEASUREMENT_HPP
 
 #include <eigen3/Eigen/Dense>
+#include <iostream>
+#include <stdio.h>
 #include <map>
 #include <vector>
+#include <string>
 
 class Measurement
 {
@@ -25,6 +28,8 @@ public:
     std::vector<double> getObservation(int tag);
     
     Eigen::VectorXd toVector();
+    
+    void print(std::string s);
 private:
     std::map<int, std::vector<double> > m;
 };

@@ -173,6 +173,8 @@ void UKF::initializeStateAndCovariance()
     std::vector<int> tags = m.getTags();
     for (int i=0; i<tags.size(); i++)
     {
+        lmIndex[tags[i]] = getLandmarkIndex(i);
+        
         Eigen::Vector3d position;
         position << state[0], state[1], state[2];
         
@@ -364,22 +366,6 @@ void UKF::augmentStateCovariance()
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-//                           PROCESS UPDATE
-/////////////////////////////////////////////////////////////////////////////////////////////
-void UKF::processUpdate(double deltaT)
-{
-    int tmpStateSize = stateVector.rows();
-    augmentStateVector();
-    //print("State:", stateVector);
-    augmentStateCovariance();
-    //print("Covariance:", stateCovariance);
-    unscentedTransform(stateVector, stateCovariance,  &UKF::processFunction, deltaT);
-    stateVector.conservativeResize(tmpStateSize);
-    stateCovariance.conservativeResize(tmpStateSize, tmpStateSize);
-    predictMeasurements();
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
 //                           PROCESS UPDATE WITH CONTROL
 /////////////////////////////////////////////////////////////////////////////////////////////
 void UKF::processUpdate(double deltaT, Eigen::VectorXd control)
@@ -402,8 +388,6 @@ void UKF::processUpdate(double deltaT, Eigen::VectorXd control)
     normalizeDirection();
     
     generateSigmaPoints(stateVector, stateCovariance, sigmaPoints);
-    
-    predictMeasurements();
 }
 
 void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT)
@@ -496,24 +480,13 @@ void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::Vec
     sigmaPoint[9] = direction.z();
 }
 
-void UKF::predictMeasurements()
+void UKF::predictMeasurements(Measurement actualMeasurement)
 {
-    predictedMeasurements.clear();    
+    predictedMeasurements.clear();
     for (int i=0; i<sigmaPoints.size(); i++)
     {
-        Eigen::VectorXd measurement;
-        bool inFrontofCamera = measureLandmarks(sigmaPoints.at(i), measurement);
-        if (inFrontofCamera)
-        {
-            predictedMeasurements.push_back(measurement);
-        }
-        else
-        {
-            printf("*******************************************\n");
-            printf("*             HUGE PROBLEM                *\n");
-            printf("*        Landmark behind CAMERA           *\n");
-            printf("*******************************************\n");
-        }
+        Measurement m = predictMeasurement(sigmaPoints[i]);
+        predictedMeasurements.push_back(m.toVector());
     }
     
     double N = (sigmaPoints.size() - 1) / 2.0;
@@ -523,6 +496,54 @@ void UKF::predictMeasurements()
     {
         aPrioriMeasurementsMean = aPrioriMeasurementsMean + (meanWeight(i, N) * predictedMeasurements.at(i));
     }
+}
+
+Measurement UKF::predictMeasurement(Eigen::VectorXd sigmaPoint)
+{
+    Measurement m;
+    
+    Eigen::Vector3d camPosition;
+    camPosition[0] = sigmaPoint[0];
+    camPosition[1] = sigmaPoint[1];
+    camPosition[2] = sigmaPoint[2];
+    
+    Eigen::Quaterniond camDirection(sigmaPoint[6], sigmaPoint[7], sigmaPoint[8], sigmaPoint[9]);
+    
+    Eigen::Vector3d origin;
+    Eigen::Vector3d direction;
+    double inverseDepth;
+    
+    for(std::map<int,int>::iterator iter = lmIndex.begin(); iter != lmIndex.end(); iter++)
+    {
+        int index = iter->second;
+        origin[0] = sigmaPoint[index];
+        origin[1] = sigmaPoint[index + 1];
+        origin[2] = sigmaPoint[index + 2];
+        double theta, phi;
+        theta = sigmaPoint[index + 3];
+        phi     = sigmaPoint[index + 4];
+        direction = getDirectionFromAngles(theta, phi);
+        inverseDepth = sigmaPoint[index+5];
+        
+        Eigen::Vector3d euclideanLandmark = origin + (1.0/inverseDepth) * direction;
+        if (visible(camPosition, camDirection, simCamera.fov, euclideanLandmark))
+        {
+            Eigen::Matrix3d rotMat;
+            rotMat = camDirection;
+            
+            Eigen::Vector3d pixel;
+            pixel = rotMat.transpose() * (euclideanLandmark - camPosition); // Landmark in camera coordinates
+            pixel[0] = pixel.x() / pixel.z();
+            pixel[1] = pixel.y() / pixel.z();
+            pixel[2] = 1.0;
+            pixel = simCamera.intrinsicCalibrationMatrix * pixel; //Projected landmark
+            
+            m.add(iter->first, pixel[0], pixel[1]);
+        }
+    }
+    
+    //m.print("Predicted measurement");
+    return m;
 }
 
 bool UKF::measureLandmarks(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measurement)
@@ -569,7 +590,7 @@ bool UKF::measureLandmarks(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measurem
         //rotMat = simCamera.direction;
         
         Eigen::Vector3d pixel;
-        pixel = rotMat.transpose() * (euclideanLandmark - position()); // Landmark in camera coordinates
+        pixel = rotMat.transpose() * (euclideanLandmark - camPosition); // Landmark in camera coordinates
         pixel[0] = pixel.x() / pixel.z();
         pixel[1] = pixel.y() / pixel.z();
         pixel[2] = 1.0;
@@ -577,10 +598,9 @@ bool UKF::measureLandmarks(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measurem
         
         measurement[j] = pixel.x();
         measurement[j+1] = pixel.y();
-        //printf("pixel @ %d = (%.20f, %.20f)\n", j, pixel.x(), pixel.y());
-        //print("Measurement:", measurement);
-//        printf("\n");
     }
+    
+    print("Predicted Measurement:", measurement);
     return true;
 }
 
@@ -594,6 +614,8 @@ void UKF::measurementUpdate(Measurement m)
 //    Eigen::VectorXd tmpDiff;
 //    tmpDiff = measurement - aPrioriMeasurementsMean;
 //    print("Difference:", tmpDiff);
+    
+    predictMeasurements(m);
     
     Eigen::VectorXd tmpState(stateVector.rows());
     Eigen::VectorXd tmpMeasurement(stateVector.rows());

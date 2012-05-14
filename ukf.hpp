@@ -14,6 +14,7 @@
 #include <GL/glut.h>
 #include <math.h>
 #include <stdio.h>
+#include <vector>
 
 #include "Color.hpp"
 //#include "landmark.hpp"
@@ -57,9 +58,9 @@ private:
     void normalizeDirection();
     void augmentStateVector();
     void augmentStateCovariance();
-    void processUpdate(double deltaT);
     void processUpdate(double deltaT, Eigen::VectorXd control);
-    void predictMeasurements();
+    void predictMeasurements(Measurement actualMeasurement);
+    Measurement predictMeasurement(Eigen::VectorXd sigmaPoint);
     void measurementUpdate(Measurement m);
     
     const static double inverseDepthVariance = 0.1;
