@@ -12,6 +12,7 @@
 #include <eigen3/Eigen/Dense>
 #include "simScene.hpp"
 #include "landmark.hpp"
+#include "Measurement.hpp"
 #include "normalRandom.hpp"
 #include "Utilities.h"
 #include <stdio.h>
@@ -35,7 +36,7 @@ public:
     Eigen::Vector3d getPosition();
     Eigen::Vector3d getVelocity();
     Eigen::Vector3d getAcceleration();
-    Eigen::Quaterniond getImuDirection();
+    Eigen::Quaterniond getDirection();
     Eigen::Vector3d getAngularVelocity();
     
     void draw();
@@ -46,7 +47,7 @@ public:
     std::vector<Landmark> map;
     
     Eigen::VectorXd control();
-    Eigen::VectorXd measure(SimScene simScene);
+    Measurement measure();
     
     void addNoise(Eigen::Vector3d& vec, Eigen::Vector3d noiseMean, Eigen::Vector3d noiseVariance);
         
@@ -61,6 +62,7 @@ public:
     double defaultFocalLength;
     static const double defaultFocalLengthDrawn = 4.0;
     static const double pi =3.1415926535897932384626433832795028841971693993751058;
+    double fov;
     double sizeScale;
     
     Eigen::Vector3d measurementNoiseMean;

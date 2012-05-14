@@ -11,6 +11,7 @@
 #include <iostream>
 #include <GL/gl.h>
 #include <eigen3/Eigen/Core>
+#include <eigen3/Eigen/Geometry>
 #include <string>
 
 using namespace std;
@@ -58,6 +59,7 @@ inline float fmin(float a, float b){ return (a<b)?a:b; }
 inline int imax(int a, int b){ return (a>b)?a:b; }
 inline int imin(int a, int b){ return (a<b)?a:b; }
 double sinc(double x);
+bool visible(Eigen::Vector3d position, Eigen::Quaterniond direction, double fov, Eigen::Vector3d lm);
 
 ///////////////////////////////////
 //    input/output utilities     //

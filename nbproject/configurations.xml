@@ -8,6 +8,7 @@
       <itemPath>Device.hpp</itemPath>
       <itemPath>Geometry.h</itemPath>
       <itemPath>Lighting.h</itemPath>
+      <itemPath>Measurement.hpp</itemPath>
       <itemPath>Trackball.h</itemPath>
       <itemPath>Utilities.h</itemPath>
       <itemPath>grid_features.hpp</itemPath>
@@ -545,6 +546,7 @@
       <itemPath>Device.cpp</itemPath>
       <itemPath>Geometry.cpp</itemPath>
       <itemPath>Lighting.cpp</itemPath>
+      <itemPath>Measurement.cpp</itemPath>
       <itemPath>Trackball.cpp</itemPath>
       <itemPath>Utilities.cpp</itemPath>
       <itemPath>grid_features.cpp</itemPath>

@@ -92,7 +92,7 @@ void handleKeyboardEvent(unsigned char key, int x, int y)
         case ' ':
             play = false;
             simCamera.timeStep();
-            filter.step(simCamera.defaultTimeStep, simCamera.control(), simCamera.measure(simScene));
+            filter.step(simCamera.defaultTimeStep, simCamera.control(), simCamera.measure());
             break;
         case 'p':
         case 'P':
@@ -122,7 +122,7 @@ void display(void)
 
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
-    simScene.draw();
+    //simScene.draw();
     simCamera.draw();
     filter.draw();
     
@@ -161,7 +161,7 @@ void idle()
     if (play)
     {
         simCamera.timeStep();
-        filter.step(simCamera.defaultTimeStep, simCamera.control(), simCamera.measure(simScene));
+        filter.step(simCamera.defaultTimeStep, simCamera.control(), simCamera.measure());
         glutPostRedisplay();
     }
 }

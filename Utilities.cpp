@@ -295,3 +295,27 @@ double sinc(double x)
         return std::sin(x)/x;
     }
 }
+
+bool visible(Eigen::Vector3d position, Eigen::Quaterniond direction, double fov, Eigen::Vector3d lmW)
+{
+    Eigen::Vector3d lmC; // Landmark in Camera coordinates
+    lmC = lmW - position;
+    
+    Eigen::Matrix3d rotMat;
+    rotMat = direction;
+    lmC = rotMat.transpose() * lmC;
+    
+    Eigen::Vector3d opticalAxis;
+    opticalAxis << 0.0, 0.0, 1.0;
+    
+    double lengthLM = std::sqrt(lmC.adjoint() * lmC);
+    double lengthOA = 1.0;
+    
+    double dp = lmC.adjoint() * opticalAxis;
+    double theta = std::acos( dp /  (lengthLM * lengthOA));    
+    
+    if (theta < (fov / 2.0))
+        return true;
+    
+    return false;
+}

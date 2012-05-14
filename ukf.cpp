@@ -18,35 +18,26 @@ void UKF::initialize()
     filterStepCount = 0;
     stateSize = deviceStateSize + numLandmarks * landmarkSize;
     
+    //alpha = 0.001;
     alpha = 0.001;
-    beta = 2.0;
+    //beta = 2.0;
+    beta = 3.0;
 
+    lmIndex.clear();
+    
     initializeStateAndCovariance();    
     initializeProcessCovariance();
     initializeMeasurementCovariance();
 }
 
-void UKF::step(double timeStep, Eigen::VectorXd measurement)
-{
-    printf("======================================================================\n");
-    printf("                                %d                                    \n", ++filterStepCount);
-    printf("======================================================================\n");
-    processUpdate(timeStep);
-    measurementUpdate(measurement);
-    
-    
-    //print("State:", stateVector);
-    //print("Covariance:", stateCovariance);
-}
-
-void UKF::step(double timeStep, Eigen::VectorXd control, Eigen::VectorXd measurement)
+void UKF::step(double timeStep, Eigen::VectorXd control, Measurement m)
 {
     printf("======================================================================\n");
     printf("                                %d                                    \n", ++filterStepCount);
     printf("======================================================================\n");  
     
     processUpdate(timeStep, control);    
-    measurementUpdate(measurement);
+    measurementUpdate(m);
     //print("State:", stateVector);
     //print("Covariance:", stateCovariance);
 }
@@ -158,7 +149,7 @@ void UKF::initializeStateAndCovariance()
     clear(state);
     state.segment(0, 3) = simCamera.getPosition();
     state.segment(3, 3) = simCamera.getVelocity();
-    Eigen::Quaterniond dir = simCamera.getImuDirection();
+    Eigen::Quaterniond dir = simCamera.getDirection();
     state[6] = dir.w();
     state[7] = dir.x();
     state[8] = dir.y();
@@ -178,6 +169,7 @@ void UKF::initializeStateAndCovariance()
     covariance(8,8) = 0.0001;
     covariance(9,9) = 0.0001;
     
+    Measurement m = simCamera.measure();
     for (int i=0; i<numLandmarks; i++)
     {
         Eigen::Vector3d position;
@@ -599,7 +591,7 @@ bool UKF::measureLandmarks(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measurem
 /////////////////////////////////////////////////////////////////////////////////////////////
 //                           MEASUREMENT UPDATE
 /////////////////////////////////////////////////////////////////////////////////////////////
-void UKF::measurementUpdate(Eigen::VectorXd measurement)
+void UKF::measurementUpdate(Measurement m)
 {
 //    print("Actual Measurement:", measurement);
 //    print("Predicted Measurement:", aPrioriMeasurementsMean);
@@ -642,7 +634,7 @@ void UKF::measurementUpdate(Eigen::VectorXd measurement)
     
     //print("Kalman Gain:", K);
     
-    stateVector = stateVector + K * (measurement - aPrioriMeasurementsMean);
+    stateVector = stateVector + K * (m.toVector() - aPrioriMeasurementsMean);
 //    printf("New Position: (%.20f, %.20f %.20f)\n", stateVector[0], stateVector[1], stateVector[2]);
 //    printf("\n");
     

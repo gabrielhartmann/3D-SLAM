@@ -16,7 +16,8 @@
 #include <stdio.h>
 
 #include "Color.hpp"
-#include "landmark.hpp"
+//#include "landmark.hpp"
+#include "Measurement.hpp"
 #include "Device.hpp"
 #include "Utilities.h"
 
@@ -26,8 +27,7 @@ public:
     UKF();
     UKF(Device simCamera, SimScene scene);
     void initialize();
-    void step(double timeStep, Eigen::VectorXd measurement);
-    void step(double timeStep, Eigen::VectorXd control, Eigen::VectorXd measurement);
+    void step(double timeStep, Eigen::VectorXd control, Measurement m);
     Eigen::Vector3d position();
     Eigen::Quaterniond direction();
     void draw();
@@ -41,6 +41,8 @@ private:
     const static int processNoiseSize = 9; // translational accleration (3), angular velocity (3), position (3)
     const static double defaultDepth = 100.0;
     int stateSize;
+    
+    std::map<int, int> lmIndex;
     
     Eigen::VectorXd stateVector;
     Eigen::MatrixXd stateCovariance;
@@ -58,7 +60,7 @@ private:
     void processUpdate(double deltaT);
     void processUpdate(double deltaT, Eigen::VectorXd control);
     void predictMeasurements();
-    void measurementUpdate(Eigen::VectorXd measurement);
+    void measurementUpdate(Measurement m);
     
     const static double inverseDepthVariance = 0.1;
     const static double focalLengthVariance = 0.0001;

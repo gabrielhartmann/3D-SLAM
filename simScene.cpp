@@ -2,6 +2,8 @@
 
 SimScene::SimScene()
 {
+    //landmarks.push_back(Eigen::Vector3d (10.0, 0.0, 50.0));
+    
     //landmarks.push_back(Eigen::Vector3d (120.0, 0.0, 100.0));
 //    landmarks.push_back(Eigen::Vector3d (120.0, 0.0, 50.0));
 ////    
@@ -46,9 +48,8 @@ SimScene::SimScene()
     depth = 3;
 
     Eigen::Vector3d origin;
-    origin << 100.0, -space * (height - 1) / 2.0, -space * (depth - 1) / 2.0;
+    origin << 200.0, -space * (height - 1) / 2.0, -space * (depth - 1) / 2.0;
     
-
     for (int x=0; x<width; x++)
     {
         for (int y=0; y<height; y++)
