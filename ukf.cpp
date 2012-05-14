@@ -390,44 +390,6 @@ void UKF::processUpdate(double deltaT, Eigen::VectorXd control)
     generateSigmaPoints(stateVector, stateCovariance, sigmaPoints);
 }
 
-void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT)
-{
-    Eigen::Vector3d position;
-    position[0] = sigmaPoint[0];
-    position[1] = sigmaPoint[1];
-    position[2] = sigmaPoint[2];
-    
-    Eigen::Vector3d velocity;
-    velocity[0] = sigmaPoint[3];
-    velocity[1] = sigmaPoint[4];
-    velocity[2] = sigmaPoint[5];    
-
-    Eigen::Vector3d accelerationNoise;
-    accelerationNoise[0] = sigmaPoint[stateSize];
-    accelerationNoise[1] = sigmaPoint[stateSize+1];
-    accelerationNoise[2] = sigmaPoint[stateSize+2];
-    
-    Eigen::Vector3d timeSliceVelocity = accelerationNoise * deltaT;
-    
-    position = position + (velocity + timeSliceVelocity) * deltaT;
-    velocity = velocity + timeSliceVelocity;
-    
-    // Put process results back into the sigma point.
-    sigmaPoint[0] = position.x();
-    sigmaPoint[1] = position.y();
-    sigmaPoint[2] = position.z();
-    sigmaPoint[3] = velocity.x();
-    sigmaPoint[4] = velocity.y();
-    sigmaPoint[5] = velocity.z();
-    
-    for (int i=0; i<numLandmarks; i++)
-    {
-        int inverseDepthIndex = getLandmarkIndex(i) + 6;
-        double inverseDepthNoise = sigmaPoint(stateSize + processNoiseSize + i); // Gets the ith landmark's noise
-        sigmaPoint[inverseDepthIndex] = sigmaPoint[inverseDepthIndex] + inverseDepthNoise;
-    }
-}
-
 void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::VectorXd control)
 {
     Eigen::Vector3d position;
@@ -609,16 +571,11 @@ bool UKF::measureLandmarks(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measurem
 /////////////////////////////////////////////////////////////////////////////////////////////
 void UKF::measurementUpdate(Measurement m)
 {
-//    print("Actual Measurement:", measurement);
-//    print("Predicted Measurement:", aPrioriMeasurementsMean);
-//    Eigen::VectorXd tmpDiff;
-//    tmpDiff = measurement - aPrioriMeasurementsMean;
-//    print("Difference:", tmpDiff);
-    
     predictMeasurements(m);
     
     Eigen::VectorXd tmpState(stateVector.rows());
-    Eigen::VectorXd tmpMeasurement(stateVector.rows());
+    //Eigen::VectorXd tmpMeasurement(stateVector.rows());
+    Eigen::VectorXd tmpMeasurement(aPrioriMeasurementsMean.rows());
     
     double N = (sigmaPoints.size() - 1.0) / 2.0;
     

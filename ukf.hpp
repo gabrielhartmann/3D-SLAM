@@ -85,7 +85,6 @@ private:
     std::vector<Eigen::VectorXd, Eigen::aligned_allocator<Eigen::VectorXd> > predictedMeasurements;
     
     void generateSigmaPoints(Eigen::VectorXd stVector, Eigen::MatrixXd covMatrix, std::vector<Eigen::VectorXd, Eigen::aligned_allocator<Eigen::VectorXd> >& sigPoints);
-    void processFunction(Eigen::VectorXd& sigmaPoint, double deltaT);
     void processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::VectorXd control);
     bool measureLandmarks(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measurement);
     
