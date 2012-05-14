@@ -433,8 +433,35 @@ void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::Vec
     sigmaPoint[9] = direction.z();
 }
 
+Measurement UKF::filterNewLandmarks(Measurement actualMeasurement)
+{
+    Measurement newLandmarks;
+    
+    // Remove all known landmarks from measurement
+    for (std::map<int, int>::iterator iter = lmIndex.begin(); iter != lmIndex.end(); iter++)
+    {
+        if (actualMeasurement.contains(iter->first))
+        {
+            actualMeasurement.remove(iter->first);
+        }
+    }
+    
+    // The remainder are new landmarks
+    std::vector<int> tags = actualMeasurement.getTags();
+    for (int i=0; i<tags.size(); i++)
+    {
+        std::vector<double> pixel = actualMeasurement.getObservation(tags[i]);
+        newLandmarks.add(tags[i], pixel[0], pixel[1]);
+    }
+    
+    return newLandmarks;
+}
+
 void UKF::predictMeasurements(Measurement actualMeasurement)
 {
+    Measurement newLandmarks = filterNewLandmarks(actualMeasurement);
+    newLandmarks.print("New Landmarks");
+    
     std::vector<Measurement> ms;   
     for (int i=0; i<sigmaPoints.size(); i++)
     {
@@ -444,13 +471,9 @@ void UKF::predictMeasurements(Measurement actualMeasurement)
     
     // Find common landmark tags for all sigma point predictions
     std::vector<int> cTags = commonTags(ms);
+    // and those in common with the actual measurement
     cTags = commonTags(cTags, actualMeasurement);
-    for (int i=0; i<cTags.size(); i++)
-    {
-        printf("%d ", cTags[i]);
-    }
-    printf("\n");
-    
+        
     predictedMeasurements.clear();
     for (int i=0; i<sigmaPoints.size(); i++)
     {

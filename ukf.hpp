@@ -63,6 +63,8 @@ private:
     Measurement predictMeasurement(Eigen::VectorXd sigmaPoint);
     void measurementUpdate(Measurement m);
     
+    Measurement filterNewLandmarks(Measurement actualMeasurement);
+    
     const static double inverseDepthVariance = 0.1;
     const static double focalLengthVariance = 0.0001;
     const static double accelerationVariance = 0.0625;

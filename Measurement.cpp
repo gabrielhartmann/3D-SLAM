@@ -87,7 +87,7 @@ Eigen::VectorXd Measurement::toVector()
 
 void Measurement::print(std::string s)
 {
-    std::cout << s << std::endl;
+    std::cout << s << " " << size() << std::endl;
     for (std::map<int, std::vector<double> >::iterator iter = m.begin(); iter != m.end(); iter++)
     {
         printf("%d: (%f, %f)\n", iter->first, iter->second[0], iter->second[1]);
