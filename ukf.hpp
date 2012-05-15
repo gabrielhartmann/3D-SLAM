@@ -33,28 +33,23 @@ public:
     Eigen::Quaterniond direction();
     void draw();
     std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> > landmarks();
-    void reset(Device simCamera);
     
 private:
-    int numLandmarks;
     const static int deviceStateSize = 10; // position(3), velocity(3), imu direction (4)
     const static int landmarkSize = 6; // origin(3), theta, phi, inverse dpeth
     const static int processNoiseSize = 6; // translational accleration (3), angular velocity (3)
     const static double defaultDepth = 100.0;
-    int stateSize;
     
     std::map<int, int> lmIndex;
     
     Eigen::VectorXd stateVector;
     Eigen::MatrixXd stateCovariance;
-    Eigen::MatrixXd measurementCovariance;
     Eigen::MatrixXd processCovariance;
     
     void initializeStateAndCovariance();
-    void initializeMeasurementCovariance();   
+    Eigen::MatrixXd getMeasurementCovariance(int rows);   
     void initializeProcessCovariance();
     
-    void cleanCovariance();
     void normalizeDirection();
     void augmentStateVector();
     void augmentStateCovariance();
@@ -63,7 +58,7 @@ private:
     Measurement predictMeasurement(Eigen::VectorXd sigmaPoint);
     void measurementUpdate(Measurement m);
     
-    Measurement filterNewLandmarks(Measurement actualMeasurement);
+    Measurement filterNewLandmarks(Measurement &actualMeasurement);
     
     const static double inverseDepthVariance = 0.1;
     const static double focalLengthVariance = 0.0001;
@@ -108,8 +103,8 @@ private:
     void unscentedTransform(Eigen::VectorXd& state, Eigen::MatrixXd& covariance, void (UKF::*process)(Eigen::VectorXd&));
     void unscentedTransform(Eigen::VectorXd& state, Eigen::MatrixXd& covariance, void (UKF::*process)(Eigen::VectorXd&, double), double deltaT);
     void unscentedTransform(Eigen::VectorXd& state, Eigen::MatrixXd& covariance, void (UKF::*process)(Eigen::VectorXd&, double, Eigen::VectorXd), double deltaT, Eigen::VectorXd control);
-    void addLandmark(Eigen::VectorXd& state);
-    void addLandmark(int i);
+    void addLandmarks(Eigen::VectorXd& state);
+    void addLandmarks(int i);
 };
 
 #endif	/* UKF_HPP */

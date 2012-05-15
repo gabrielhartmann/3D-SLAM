@@ -98,11 +98,6 @@ void handleKeyboardEvent(unsigned char key, int x, int y)
         case 'P':
             play = !play;
             break;
-        case 'r':
-        case'R':
-            simCamera.reset();
-            filter.reset(simCamera);
-            break;
         default: trackball.tbKeyboard(key);
     }
     glutPostRedisplay();
