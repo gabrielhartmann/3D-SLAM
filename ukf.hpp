@@ -8,6 +8,7 @@
 #ifndef UKF_HPP
 #define	UKF_HPP
 
+#include <algorithm>
 #include <eigen3/Eigen/Geometry>
 #include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/Cholesky>
@@ -54,7 +55,8 @@ private:
     void augmentStateVector();
     void augmentStateCovariance();
     void processUpdate(double deltaT, Eigen::VectorXd control);
-    void predictMeasurements(Measurement actualMeasurement);
+    void cleanMeasurement(std::vector<int> tags, Measurement &m);
+    void predictMeasurements(Measurement &actualMeasurement);
     Measurement predictMeasurement(Eigen::VectorXd sigmaPoint);
     void measurementUpdate(Measurement m);
     

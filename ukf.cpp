@@ -421,10 +421,39 @@ Measurement UKF::filterNewLandmarks(Measurement &actualMeasurement)
         newLandmarks.add(tags[i], pixel[0], pixel[1]);
     }
     
+    // Remove new landmarks from actual measurement
+    tags.clear();
+    tags = newLandmarks.getTags();
+    for (int i=0; i<tags.size(); i++)
+    {
+        actualMeasurement.remove(tags[i]);
+    }
+    
     return newLandmarks;
 }
 
-void UKF::predictMeasurements(Measurement actualMeasurement)
+void UKF::cleanMeasurement(std::vector<int> tags, Measurement& m)
+{
+    Measurement tmpM;
+    for (int i=0; i<tags.size(); i++)
+    {
+        if(m.contains(tags[i]))
+        {
+            std::vector<double> pixel = m.getObservation(tags[i]);
+            tmpM.add(tags[i], pixel[0], pixel[1]);
+        }
+    }
+    
+    int removed = m.getTags().size() - tmpM.getTags().size();
+    if(removed != 0)
+    {
+        printf("Removed %d observations\n", removed);
+    }
+    
+    m = tmpM;
+}
+
+void UKF::predictMeasurements(Measurement &actualMeasurement)
 {
     Measurement newLandmarks = filterNewLandmarks(actualMeasurement);
     newLandmarks.print("New Landmarks");
@@ -440,6 +469,12 @@ void UKF::predictMeasurements(Measurement actualMeasurement)
     std::vector<int> cTags = commonTags(ms);
     // and those in common with the actual measurement
     cTags = commonTags(cTags, actualMeasurement);
+    
+    for (int i=0; i<ms.size(); i++)
+    {
+        cleanMeasurement(cTags, ms[i]);
+    }
+    cleanMeasurement(cTags, actualMeasurement);
         
     predictedMeasurements.clear();
     for (int i=0; i<sigmaPoints.size(); i++)
@@ -597,25 +632,13 @@ void UKF::measurementUpdate(Measurement m)
         Pzz = Pzz + covarianceWeight(i, N) * (tmpMeasurement * tmpMeasurement.transpose());
     }
     
-    
-    printf("Rows in aPrioriMeasurementsMean = %d\n", aPrioriMeasurementsMean.rows());
-    printf("Pzz is %d X %d\n", Pzz.rows(), Pzz.cols());
-    
     Eigen::MatrixXd measurementCovariance = getMeasurementCovariance(aPrioriMeasurementsMean.rows());
-    printf("measurementCovariance is %d X %d\n", measurementCovariance.rows(), measurementCovariance.cols());
-    
-    // Keep in both pure additive and mixture model
-    Pzz = Pzz + measurementCovariance;
-    
+    Pzz = Pzz + measurementCovariance;    
     
     K.resize(stateVector.rows(), aPrioriMeasurementsMean.rows());
     K = Pxz * Pzz.inverse();
     
-    //print("Kalman Gain:", K);
-    
     stateVector = stateVector + K * (m.toVector() - aPrioriMeasurementsMean);
-//    printf("New Position: (%.20f, %.20f %.20f)\n", stateVector[0], stateVector[1], stateVector[2]);
-//    printf("\n");
     
     normalizeDirection();
     
