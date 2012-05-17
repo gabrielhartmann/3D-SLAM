@@ -37,7 +37,7 @@ public:
     
 private:
     const static int deviceStateSize = 7; // position(3), direction(4)
-    const static int landmarkSize = 6; // origin(3), theta, phi, inverse dpeth
+    const static int landmarkSize = 6; // origin(3), theta, phi, inverse depth
     const static int processNoiseSize = 6; // translational accleration (3), angular velocity (3)
     const static double defaultDepth = 100.0;
     
@@ -56,8 +56,6 @@ private:
     void augmentStateVector();
     void augmentStateCovariance();
     void processUpdate(double deltaT, Eigen::VectorXd control);
-    
-    void constantPosition(double deltaT);
     
     void cleanMeasurement(std::vector<int> tags, Measurement &m);
     Measurement predictMeasurements(Measurement &actualMeasurement);
