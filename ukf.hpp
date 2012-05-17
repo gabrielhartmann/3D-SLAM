@@ -36,7 +36,7 @@ public:
     std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> > landmarks();
     
 private:
-    const static int deviceStateSize = 7; // position(3), direction(4)
+    const static int deviceStateSize = 10; // position(3), velocity, direction(4),
     const static int landmarkSize = 6; // origin(3), theta, phi, inverse dpeth
     const static int processNoiseSize = 6; // translational accleration (3), angular velocity (3)
     const static double defaultDepth = 100.0;

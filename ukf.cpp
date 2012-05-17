@@ -159,38 +159,6 @@ void UKF::initializeStateAndCovariance()
     
     Measurement m = simCamera.measure();
     addNewLandmarks(m, state, covariance);
-//    std::vector<int> tags = m.getTags();
-//    for (int i=0; i<tags.size(); i++)
-//    {
-//        lmIndex[tags[i]] = getLandmarkIndex(i);
-//        
-//        Eigen::Vector3d position;
-//        position << state[0], state[1], state[2];
-//        
-//        Eigen::Matrix3d rotMat;
-//        rotMat = dir;
-//        
-//        std::vector<double> pixel = m.getObservation(tags[i]);
-//        
-//        state.conservativeResize(state.rows() + 3);
-//        state[state.rows()-3] = pixel[0];
-//        state[state.rows()-2] = pixel[1];
-//        state[state.rows()-1] = 1.0 / defaultDepth;
-//        
-//        Eigen::MatrixXd tmpCovariance;
-//        tmpCovariance.resize(covariance.rows() + 3, covariance.rows() + 3);
-//        clear(tmpCovariance);
-//        tmpCovariance.block(0,0, covariance.rows(), covariance.cols()) = covariance;
-//        covariance.resize(covariance.rows() + 3, covariance.rows() + 3);
-//        covariance = tmpCovariance;
-//        covariance(covariance.rows()-3, covariance.rows()-3) = simCamera.measurementNoiseVariance.x();
-//        covariance(covariance.rows()-2, covariance.rows()-2) = simCamera.measurementNoiseVariance.y();
-//        covariance(covariance.rows()-1, covariance.rows()-1) = inverseDepthVariance;
-//    }
-//    if (lmIndex.size() > 0)
-//    {
-//        unscentedTransform(state, covariance, &UKF::addLandmarks);
-//    }
     
     stateVector.resize(state.rows());
     stateVector = state;
