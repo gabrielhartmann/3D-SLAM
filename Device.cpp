@@ -25,7 +25,7 @@ Device::Device(SimScene simScene)
     //defaultTimeStep = 0.033;
     defaultTimeStep = 0.033;
     sizeScale = 50;
-    fov = pi / 4.0;
+    fov = pi / 3.0;
     
     this->simScene = simScene;
     

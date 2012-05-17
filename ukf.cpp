@@ -22,7 +22,7 @@ void UKF::initialize()
     lmIndex.clear();
     
     initializeStateAndCovariance();    
-    initializeProcessCovariance();
+    getProcessCovariance();
 }
 
 void UKF::step(double timeStep, Eigen::VectorXd control, Measurement m)
@@ -166,7 +166,7 @@ void UKF::initializeStateAndCovariance()
     stateCovariance.resize(covariance.rows(), covariance.cols());
     stateCovariance = covariance;
     
-    removeZero(stateCovariance, 0.01);
+    removeZero(stateCovariance, 0.1);
     
     print("State:", stateVector);
     printf("\n");
@@ -174,9 +174,11 @@ void UKF::initializeStateAndCovariance()
     printf("\n");
 }
 
-void UKF::initializeProcessCovariance()
+Eigen::MatrixXd UKF::getProcessCovariance()
 {
-    processCovariance.resize(processNoiseSize, processNoiseSize);
+    Eigen::MatrixXd processCovariance;
+    
+    processCovariance.resize(processNoiseSize + lmIndex.size(), processNoiseSize + lmIndex.size());
     clear(processCovariance);
     
     processCovariance(0,0) = simCamera.accelerationNoiseVariance[0] ; // Acceleration Noise
@@ -187,8 +189,15 @@ void UKF::initializeProcessCovariance()
     processCovariance(4,4) = simCamera.angVelocityNoiseVariance[1];
     processCovariance(5,5) = simCamera.angVelocityNoiseVariance[2];
     
-    print("Process Covariance:", processCovariance);
-    printf("\n");
+    for (int i=6; i<processCovariance.rows(); i++)
+    {
+        processCovariance(i,i) = inverseDepthVariance;
+    }
+    
+//    print("Process Covariance:", processCovariance);
+//    printf("\n");
+    
+    return processCovariance;
 }
 
 int UKF::getLandmarkIndex(int i)
@@ -269,8 +278,7 @@ void UKF::normalizeDirection()
 void UKF::augment()
 {
     int stateSize = stateVector.rows();
-    int numLandmarks = (stateSize - deviceStateSize) / landmarkSize;
-    stateVector.conservativeResize(stateVector.rows() + processNoiseSize);
+    stateVector.conservativeResize(stateVector.rows() + processNoiseSize + lmIndex.size());
     //Reset all noise to 0 in State
     for (int i=stateSize; i<stateVector.rows(); i++)
     {
@@ -281,32 +289,34 @@ void UKF::augment()
     tmpCovariance.resize(stateVector.rows(), stateVector.rows());
     clear(tmpCovariance);
     tmpCovariance.block(0,0, stateCovariance.rows(), stateCovariance.cols()) = stateCovariance;
+    
+    Eigen::MatrixXd processCovariance = getProcessCovariance();
     tmpCovariance.block(stateCovariance.rows(), stateCovariance.cols(), processCovariance.rows(), processCovariance.cols()) = processCovariance;
     
     stateCovariance = tmpCovariance;
 }
 
-void UKF::augmentStateVector()
-{
-    int stateSize = stateVector.rows();
-    stateVector.conservativeResize(stateVector.rows() + processNoiseSize);
-    //Reset all noise to 0 in State
-    for (int i=stateSize; i<stateVector.rows(); i++)
-    {
-        stateVector(i) = 0.0;
-    }
-}
-
-void UKF::augmentStateCovariance()
-{
-    Eigen::MatrixXd tmpCovariance;
-    tmpCovariance.resize(stateVector.rows(), stateVector.rows());
-    clear(tmpCovariance);
-    tmpCovariance.block(0,0, stateCovariance.rows(), stateCovariance.cols()) = stateCovariance;
-    tmpCovariance.block(stateCovariance.rows(), stateCovariance.cols(), processCovariance.rows(), processCovariance.cols()) = processCovariance;
-    
-    stateCovariance = tmpCovariance;
-}
+//void UKF::augmentStateVector()
+//{
+//    int stateSize = stateVector.rows();
+//    stateVector.conservativeResize(stateVector.rows() + processNoiseSize);
+//    //Reset all noise to 0 in State
+//    for (int i=stateSize; i<stateVector.rows(); i++)
+//    {
+//        stateVector(i) = 0.0;
+//    }
+//}
+//
+//void UKF::augmentStateCovariance()
+//{
+//    Eigen::MatrixXd tmpCovariance;
+//    tmpCovariance.resize(stateVector.rows(), stateVector.rows());
+//    clear(tmpCovariance);
+//    tmpCovariance.block(0,0, stateCovariance.rows(), stateCovariance.cols()) = stateCovariance;
+//    tmpCovariance.block(stateCovariance.rows(), stateCovariance.cols(), processCovariance.rows(), processCovariance.cols()) = processCovariance;
+//    
+//    stateCovariance = tmpCovariance;
+//}
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 //                           PROCESS UPDATE WITH CONTROL
@@ -344,15 +354,16 @@ void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::Vec
     
     Eigen::Quaterniond direction(sigmaPoint[6], sigmaPoint[7], sigmaPoint[8], sigmaPoint[9]);
 
+    int stateSize = deviceStateSize + lmIndex.size() * landmarkSize;
     Eigen::Vector3d accelerationNoise;
-    accelerationNoise[0] = sigmaPoint[sigmaPoint.rows()-6];
-    accelerationNoise[1] = sigmaPoint[sigmaPoint.rows()-5];
-    accelerationNoise[2] = sigmaPoint[sigmaPoint.rows()-4];
+    accelerationNoise[0] = sigmaPoint[stateSize];
+    accelerationNoise[1] = sigmaPoint[stateSize + 1];
+    accelerationNoise[2] = sigmaPoint[stateSize + 2];
     
     Eigen::Vector3d angVelocityNoise;
-    angVelocityNoise[0] = sigmaPoint[sigmaPoint.rows()-3];
-    angVelocityNoise[1] = sigmaPoint[sigmaPoint.rows()-2];
-    angVelocityNoise[2] = sigmaPoint[sigmaPoint.rows()-1];
+    angVelocityNoise[0] = sigmaPoint[stateSize + 3];
+    angVelocityNoise[1] = sigmaPoint[stateSize + 4];
+    angVelocityNoise[2] = sigmaPoint[stateSize + 5];
     
     Eigen::Vector3d accControl = control.segment(0, 3);
     Eigen::Vector3d angVelocityControl = control.segment(3,3);
@@ -375,6 +386,14 @@ void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::Vec
     sigmaPoint[7] = direction.x();
     sigmaPoint[8] = direction.y();
     sigmaPoint[9] = direction.z();
+    
+    // Add inverse depth noise
+    for (int i = 0; i < lmIndex.size(); i++)
+    {
+        int inverseDepthIndex = getLandmarkIndex(i) + 5;
+        int inverseDepthNoiseIndex = stateSize + 6 + i;
+        sigmaPoint[inverseDepthIndex] = sigmaPoint[inverseDepthIndex] + sigmaPoint[inverseDepthNoiseIndex];
+    }
 }
 
 Measurement UKF::filterNewLandmarks(Measurement &actualMeasurement)
@@ -450,7 +469,6 @@ void UKF::cleanMeasurement(std::vector<int> tags, Measurement& m)
 Measurement UKF::predictMeasurements(Measurement &actualMeasurement)
 {
     Measurement newLandmarks = filterNewLandmarks(actualMeasurement);
-    newLandmarks.print("New Landmarks");
     
     std::vector<Measurement> ms;   
     for (int i=0; i<sigmaPoints.size(); i++)
@@ -644,29 +662,8 @@ void UKF::measurementUpdate(Measurement m)
     
     if (newLandmarks.size() > 0)
     {
-        //print("Old State:", stateVector);
-        //print("Old Covariance:", stateCovariance);
-        int lastRow = stateCovariance.rows();
+        newLandmarks.print("New Landmarks");
         addNewLandmarks(newLandmarks, stateVector, stateCovariance);
-        
-//        for (int row = lastRow; row < stateCovariance.rows(); row++)
-//        {
-//            for (int col = 0; col<stateCovariance.cols(); col++)
-//            {
-//                stateCovariance(row,col) = 0.01;
-//            }
-//        }
-//        
-//        for (int row = 0; row < stateCovariance.rows(); row++)
-//        {
-//            for (int col = lastRow; col<stateCovariance.cols(); col++)
-//            {
-//                stateCovariance(row,col) = 0.001;
-//            }
-//        }
-        //print("New State:", stateVector);
-        //removeZero(stateCovariance, 0.01);
-        //print("New Covariance:", stateCovariance);
     }
 }
 

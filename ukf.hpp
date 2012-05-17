@@ -45,11 +45,10 @@ private:
     
     Eigen::VectorXd stateVector;
     Eigen::MatrixXd stateCovariance;
-    Eigen::MatrixXd processCovariance;
     
     void initializeStateAndCovariance();
     Eigen::MatrixXd getMeasurementCovariance(int rows);   
-    void initializeProcessCovariance();
+    Eigen::MatrixXd getProcessCovariance();
     
     void normalizeDirection();
     void augment();
@@ -67,7 +66,7 @@ private:
     Measurement filterNewLandmarks(Measurement &actualMeasurement);
     void removeZero(Eigen::MatrixXd &mat, double val);
     
-    const static double inverseDepthVariance = 0.3;
+    const static double inverseDepthVariance = 0.0000000001;
     const static double focalLengthVariance = 0.0001;
     const static double accelerationVariance = 0.0625;
     const static double measurementVariance = 0.025;
