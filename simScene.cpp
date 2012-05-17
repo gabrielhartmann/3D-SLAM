@@ -2,16 +2,18 @@
 
 SimScene::SimScene()
 {
+    
+    //landmarks.push_back(Eigen::Vector3d(70.0, 0.0, 50.0));
 
     // CUBE
     int width, height, depth;
-    double space = 50;
-    width = 3;
-    height = 3;
-    depth = 3;
+    double space = 40;
+    width = 1;
+    height = 8;
+    depth = 8;
 
     Eigen::Vector3d origin;
-    origin << 250.0, -space * (height - 1) / 2.0 + 10.0, -space * (depth - 1) / 2.0;
+    origin << 200.0, -space * (height - 1) / 2.0 + 10.0, -space * (depth - 1) / 2.0;
     
     for (int x=0; x<width; x++)
     {

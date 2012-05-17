@@ -25,7 +25,7 @@ Device::Device(SimScene simScene)
     //defaultTimeStep = 0.033;
     defaultTimeStep = 0.033;
     sizeScale = 50;
-    fov = pi / 2.0;
+    fov = pi / 4.0;
     
     this->simScene = simScene;
     
@@ -108,8 +108,8 @@ Eigen::Vector3d Device::getPosition()
 {
 
     Eigen::Vector3d position;
-    //position << 0.0, std::sin(currTime) * sizeScale,  std::cos(currTime) * sizeScale;
-    position << std::sin(currTime * 4.0) * sizeScale / 5.0, std::sin(currTime) * sizeScale,  std::cos(currTime) * sizeScale;
+    position << 0.0, std::sin(currTime) * sizeScale,  std::cos(currTime) * sizeScale;
+    //position << std::sin(currTime * 4.0) * sizeScale / 5.0, std::sin(currTime) * sizeScale,  std::cos(currTime) * sizeScale;
     
     return position;
 }
@@ -117,15 +117,16 @@ Eigen::Vector3d Device::getPosition()
 Eigen::Vector3d Device::getVelocity()
 {
     Eigen::Vector3d velocity;
-    //velocity << 0.0, std::cos(currTime) * sizeScale, -1.0 * std::sin(currTime) * sizeScale;
-    velocity << std::cos(currTime * 4.0) * sizeScale / 5.0, std::cos(currTime) * sizeScale, -1.0 * std::sin(currTime) * sizeScale;
+    velocity << 0.0, std::cos(currTime) * sizeScale, -1.0 * std::sin(currTime) * sizeScale;
+    //velocity << std::cos(currTime * 4.0) * sizeScale / 5.0, std::cos(currTime) * sizeScale, -1.0 * std::sin(currTime) * sizeScale;
     return velocity;
 }
 
 Eigen::Vector3d Device::getAcceleration()
 {
     Eigen::Vector3d acceleration;
-    acceleration << -1.0 * std::sin(currTime * 4.0) * sizeScale / 5.0, -1.0 * std::sin(currTime) * sizeScale, -1.0 * std::cos(currTime) * sizeScale;
+    acceleration << 0.0, -1.0 * std::sin(currTime) * sizeScale, -1.0 * std::cos(currTime) * sizeScale;
+    //acceleration << -1.0 * std::sin(currTime * 4.0) * sizeScale / 5.0, -1.0 * std::sin(currTime) * sizeScale, -1.0 * std::cos(currTime) * sizeScale;
     return acceleration;
 }
 

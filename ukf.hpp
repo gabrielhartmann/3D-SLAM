@@ -36,7 +36,7 @@ public:
     std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> > landmarks();
     
 private:
-    const static int deviceStateSize = 10; // position(3), velocity(3), imu direction (4)
+    const static int deviceStateSize = 10; // position(3), direction(4)
     const static int landmarkSize = 6; // origin(3), theta, phi, inverse dpeth
     const static int processNoiseSize = 6; // translational accleration (3), angular velocity (3)
     const static double defaultDepth = 100.0;
@@ -52,17 +52,22 @@ private:
     void initializeProcessCovariance();
     
     void normalizeDirection();
+    void augment();
     void augmentStateVector();
     void augmentStateCovariance();
     void processUpdate(double deltaT, Eigen::VectorXd control);
+    
+    void constantPosition(double deltaT);
+    
     void cleanMeasurement(std::vector<int> tags, Measurement &m);
-    void predictMeasurements(Measurement &actualMeasurement);
+    Measurement predictMeasurements(Measurement &actualMeasurement);
     Measurement predictMeasurement(Eigen::VectorXd sigmaPoint);
     void measurementUpdate(Measurement m);
     
     Measurement filterNewLandmarks(Measurement &actualMeasurement);
+    void removeZero(Eigen::MatrixXd &mat, double val);
     
-    const static double inverseDepthVariance = 0.1;
+    const static double inverseDepthVariance = 0.3;
     const static double focalLengthVariance = 0.0001;
     const static double accelerationVariance = 0.0625;
     const static double measurementVariance = 0.025;
@@ -107,6 +112,8 @@ private:
     void unscentedTransform(Eigen::VectorXd& state, Eigen::MatrixXd& covariance, void (UKF::*process)(Eigen::VectorXd&, double, Eigen::VectorXd), double deltaT, Eigen::VectorXd control);
     void addLandmarks(Eigen::VectorXd& state);
     void addLandmarks(int i);
+    
+    void addNewLandmarks(Measurement m, Eigen::VectorXd &state, Eigen::MatrixXd &covariance);
 };
 
 #endif	/* UKF_HPP */
