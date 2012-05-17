@@ -136,11 +136,12 @@ void UKF::initializeStateAndCovariance()
     state.resize(deviceStateSize);
     clear(state);
     state.segment(0, 3) = simCamera.getPosition();
+    state.segment(3, 3) = simCamera.getVelocity();
     Eigen::Quaterniond dir = simCamera.getDirection();
-    state[3] = dir.w();
-    state[4] = dir.x();
-    state[5] = dir.y();
-    state[6] = dir.z();
+    state[6] = dir.w();
+    state[7] = dir.x();
+    state[8] = dir.y();
+    state[9] = dir.z();
           
     Eigen::MatrixXd covariance;
     covariance.resize(state.rows(), state.rows());
@@ -148,13 +149,48 @@ void UKF::initializeStateAndCovariance()
     covariance(0,0) = 0.01; // Position
     covariance(1,1) = 0.01;
     covariance(2,2) = 0.01;
-    covariance(3,3) = 0.0001; //Direction
-    covariance(4,4) = 0.0001;
-    covariance(5,5) = 0.0001;
-    covariance(6,6) = 0.0001;
+    covariance(3,3) = simCamera.accelerationNoiseVariance[0]; // Velocity
+    covariance(4,4) = simCamera.accelerationNoiseVariance[1];
+    covariance(5,5) = simCamera.accelerationNoiseVariance[2];
+    covariance(6,6) = 0.0001; //Direction
+    covariance(7,7) = 0.0001;
+    covariance(8,8) = 0.0001;
+    covariance(9,9) = 0.0001;
     
     Measurement m = simCamera.measure();
     addNewLandmarks(m, state, covariance);
+//    std::vector<int> tags = m.getTags();
+//    for (int i=0; i<tags.size(); i++)
+//    {
+//        lmIndex[tags[i]] = getLandmarkIndex(i);
+//        
+//        Eigen::Vector3d position;
+//        position << state[0], state[1], state[2];
+//        
+//        Eigen::Matrix3d rotMat;
+//        rotMat = dir;
+//        
+//        std::vector<double> pixel = m.getObservation(tags[i]);
+//        
+//        state.conservativeResize(state.rows() + 3);
+//        state[state.rows()-3] = pixel[0];
+//        state[state.rows()-2] = pixel[1];
+//        state[state.rows()-1] = 1.0 / defaultDepth;
+//        
+//        Eigen::MatrixXd tmpCovariance;
+//        tmpCovariance.resize(covariance.rows() + 3, covariance.rows() + 3);
+//        clear(tmpCovariance);
+//        tmpCovariance.block(0,0, covariance.rows(), covariance.cols()) = covariance;
+//        covariance.resize(covariance.rows() + 3, covariance.rows() + 3);
+//        covariance = tmpCovariance;
+//        covariance(covariance.rows()-3, covariance.rows()-3) = simCamera.measurementNoiseVariance.x();
+//        covariance(covariance.rows()-2, covariance.rows()-2) = simCamera.measurementNoiseVariance.y();
+//        covariance(covariance.rows()-1, covariance.rows()-1) = inverseDepthVariance;
+//    }
+//    if (lmIndex.size() > 0)
+//    {
+//        unscentedTransform(state, covariance, &UKF::addLandmarks);
+//    }
     
     stateVector.resize(state.rows());
     stateVector = state;
@@ -162,7 +198,7 @@ void UKF::initializeStateAndCovariance()
     stateCovariance.resize(covariance.rows(), covariance.cols());
     stateCovariance = covariance;
     
-    //removeZero(stateCovariance, 0.01);
+    removeZero(stateCovariance, 0.01);
     
     print("State:", stateVector);
     printf("\n");
@@ -266,18 +302,35 @@ void UKF::augment()
 {
     int stateSize = stateVector.rows();
     int numLandmarks = (stateSize - deviceStateSize) / landmarkSize;
-    
-    Eigen::VectorXd tmpState;
-    tmpState.resize(stateSize + processNoiseSize);
-    clear(tmpState);
-    tmpState.segment(0, deviceStateSize) = stateVector.segment(0,deviceStateSize);
-    tmpState.segment(deviceStateSize + processNoiseSize, )
+    stateVector.conservativeResize(stateVector.rows() + processNoiseSize);
     //Reset all noise to 0 in State
     for (int i=stateSize; i<stateVector.rows(); i++)
     {
         stateVector(i) = 0.0;
     }
     
+    Eigen::MatrixXd tmpCovariance;
+    tmpCovariance.resize(stateVector.rows(), stateVector.rows());
+    clear(tmpCovariance);
+    tmpCovariance.block(0,0, stateCovariance.rows(), stateCovariance.cols()) = stateCovariance;
+    tmpCovariance.block(stateCovariance.rows(), stateCovariance.cols(), processCovariance.rows(), processCovariance.cols()) = processCovariance;
+    
+    stateCovariance = tmpCovariance;
+}
+
+void UKF::augmentStateVector()
+{
+    int stateSize = stateVector.rows();
+    stateVector.conservativeResize(stateVector.rows() + processNoiseSize);
+    //Reset all noise to 0 in State
+    for (int i=stateSize; i<stateVector.rows(); i++)
+    {
+        stateVector(i) = 0.0;
+    }
+}
+
+void UKF::augmentStateCovariance()
+{
     Eigen::MatrixXd tmpCovariance;
     tmpCovariance.resize(stateVector.rows(), stateVector.rows());
     clear(tmpCovariance);
