@@ -21,6 +21,10 @@ Device::Device(SimScene simScene)
     intrinsicCalibrationMatrix << defaultFocalLength, 0.0, 0.0,
                                                      0.0, defaultFocalLength, 0.0,
                                                      0.0, 0.0, 1.0;
+    
+    imu2CameraTranslation << -10.0, 0.0, 0.0;
+    Eigen::AngleAxisd aa2(0.0, Eigen::Vector3d::UnitY());
+    imu2CameraDirection = aa2;
      
     //defaultTimeStep = 0.033;
     defaultTimeStep = 0.033;
@@ -84,13 +88,13 @@ Measurement Device::measure()
         Eigen::Vector3d landmark;
         landmark << simScene.landmarks[i].x(), simScene.landmarks[i].y(), simScene.landmarks[i].z();
         
-        if(visible(getPosition(), getDirection(), fov, landmark))
+        if(visible(getCameraPosition(), getCameraDirection(), fov, landmark))
         {
             Eigen::Matrix3d rotMat;
-            rotMat = getDirection();
+            rotMat = getCameraDirection();
 
             Eigen::Vector3d pixel;
-            pixel = rotMat.transpose() * (landmark - getPosition()); // Landmark in camera coordinates
+            pixel = rotMat.transpose() * (landmark - getCameraPosition()); // Landmark in camera coordinates
             pixel[0] = pixel.x() / pixel.z();
             pixel[1] = pixel.y() / pixel.z();
             pixel[2] = 1.0;
@@ -104,12 +108,28 @@ Measurement Device::measure()
     return m;
 }
 
-Eigen::Vector3d Device::getPosition()
+Eigen::Vector3d Device::getImuPosition()
 {
 
     Eigen::Vector3d position;
     //position << 0.0, std::sin(currTime) * sizeScale,  std::cos(currTime) * sizeScale;
     position << std::sin(currTime * 1.0) * sizeScale / 2.0, std::sin(currTime) * sizeScale,  std::cos(currTime) * sizeScale;
+    
+    return position;
+}
+
+Eigen::Vector3d Device::getCameraPosition()
+{
+    Eigen::Vector3d position;
+    position = imu2CameraTranslation;
+    
+    Eigen::Matrix3d rotMat;
+    rotMat = getImuDirection();
+    
+    Eigen::Vector3d translation;
+    translation = getImuPosition();
+    
+    position = (rotMat * position) + translation;
     
     return position;
 }
@@ -130,7 +150,7 @@ Eigen::Vector3d Device::getAcceleration()
     return acceleration;
 }
 
-Eigen::Quaterniond Device::getDirection()
+Eigen::Quaterniond Device::getImuDirection()
 {
     Eigen::Vector3d angVelocity = getAngularVelocity();
     double angMag = std::sqrt(angVelocity.x() * angVelocity.x() + angVelocity.y() * angVelocity.y() + angVelocity.z() * angVelocity.z());
@@ -145,7 +165,15 @@ Eigen::Quaterniond Device::getDirection()
     Eigen::Quaterniond angQuat(w, x, y, z);
     
     return angQuat * initialImuDirection;
+}
 
+Eigen::Quaterniond Device::getCameraDirection()
+{
+    Eigen::Quaterniond camDirection;
+    
+    camDirection = imu2CameraDirection * getImuDirection();
+    
+    return camDirection;
 }
 
 Eigen::Vector3d Device::getAngularVelocity()
@@ -161,12 +189,24 @@ Eigen::Vector3d Device::getAngularVelocity()
 
 void Device::draw()
 {
-     glPushMatrix();
-    
-        glTranslated(getPosition()[0], getPosition()[1], getPosition()[2]);
+    // IMU
+    glPushMatrix();
+        glTranslated(getImuPosition()[0], getImuPosition()[1], getImuPosition()[2]);
         Eigen::AngleAxisd aa;
-        aa = getDirection();
+        aa = getImuDirection();
 
+        glRotated(aa.angle() * 180.0 / pi, aa.axis().x(), aa.axis().y(), aa.axis().z());
+
+        Color::setColor(0.8, 0.0, 0.0); //red
+
+        glutSolidCube(cubeWidth);
+
+    glPopMatrix();
+
+    // CAMERA
+    glPushMatrix();
+        glTranslated(getCameraPosition().x(), getCameraPosition().y(), getCameraPosition().z());
+        aa = getCameraDirection();
         glRotated(aa.angle() * 180.0 / pi, aa.axis().x(), aa.axis().y(), aa.axis().z());
 
         glBegin(GL_TRIANGLE_FAN);
@@ -180,16 +220,15 @@ void Device::draw()
             glVertex3d(-3.0, -3.0, defaultFocalLengthDrawn);
             glVertex3d(-3.0, 3.0, defaultFocalLengthDrawn);
         glEnd();
-        
     glPopMatrix();
-    
-    
+
+       
     for (int i=0; i < simScene.landmarks.size(); i++)
     {
         Eigen::Vector3d lm;
         lm << simScene.landmarks[i].x(), simScene.landmarks[i].y(), simScene.landmarks[i].z();
         
-        if (visible(getPosition(), getDirection(), fov, lm))
+        if (visible(getImuPosition(), getImuDirection(), fov, lm))
         {
             Color::setColor(0.0, 0.8, 0.0); // Green    
         }
@@ -212,7 +251,7 @@ void Device::draw()
 void Device::drawVelocity()
 {
     glPushMatrix();
-    glTranslated(getPosition().x(), getPosition().y(), getPosition().z());
+    glTranslated(getImuPosition().x(), getImuPosition().y(), getImuPosition().z());
     
     Color::setColor(0.8, 0.0, 0.0); //red
     glLineWidth(4.0);
@@ -226,7 +265,7 @@ void Device::drawVelocity()
 void Device::drawAcceleration()
 {
     glPushMatrix();
-    glTranslated(getPosition().x(), getPosition().y(), getPosition().z());
+    glTranslated(getImuPosition().x(), getImuPosition().y(), getImuPosition().z());
     
     Color::setColor(0.0, 0.8, 0.0); // green
     glLineWidth(4.0);

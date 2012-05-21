@@ -30,16 +30,23 @@ public:
     UKF(Device simCamera, SimScene scene);
     void initialize();
     void step(double timeStep, Eigen::VectorXd control, Measurement m);
-    Eigen::Vector3d position();
-    Eigen::Quaterniond direction();
+    Eigen::Vector3d imuPosition();
+    Eigen::Vector3d imuPosition(Eigen::VectorXd sigmaPoint);
+    Eigen::Vector3d cameraPosition();
+    Eigen::Vector3d cameraPosition(Eigen::VectorXd sigmaPoint);
+    Eigen::Quaterniond imuDirection();
+    Eigen::Quaterniond imuDirection(Eigen::VectorXd sigmaPoint);
+    Eigen::Quaterniond cameraDirection();
+    Eigen::Quaterniond cameraDirection(Eigen::VectorXd sigmaPoint);
     void draw();
     std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> > landmarks();
     
 private:
-    const static int deviceStateSize = 10; // position(3), velocity, direction(4),
+    const static int deviceStateSize = 17; // position(3), velocity(3), direction(4), imu2CameraT(3), imu2CameraQ(4)
     const static int landmarkSize = 6; // origin(3), theta, phi, inverse dpeth
     const static int processNoiseSize = 6; // translational accleration (3), angular velocity (3)
-    const static double defaultDepth = 10000.0;
+    //const static double defaultDepth = 10000.0;
+    const static double defaultDepth = 300.0;
     double fov;
     
     std::map<int, std::vector<int> > lmIndex;
@@ -109,6 +116,7 @@ private:
     Eigen::Vector3d getDirectionFromAngles(double theta, double phi);
     Eigen::Quaterniond getQuaternionFromAngVelocity(Eigen::Vector3d angVelocity, double deltaT);
     
+    void drawImu();
     void drawCamera();
     
     void unscentedTransform(Eigen::VectorXd& state, Eigen::MatrixXd& covariance, void (UKF::*process)(Eigen::VectorXd&));

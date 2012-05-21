@@ -4,7 +4,7 @@
 SimScene::SimScene()
 {
     
-    //landmarks.push_back(Eigen::Vector3d(70.0, 0.0, 50.0));
+    //landmarks.push_back(Eigen::Vector3d(100.0, 0.0, 60.0));
 
     // CUBE
     int width, height, depth;

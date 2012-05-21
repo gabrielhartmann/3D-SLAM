@@ -40,20 +40,85 @@ void UKF::step(double timeStep, Eigen::VectorXd control, Measurement m)
     printf("Exiting measurement update\n");
 }
 
-Eigen::Vector3d UKF::position()
+Eigen::Vector3d UKF::imuPosition()
 {
     Eigen::Vector3d pos(stateVector[0], stateVector[1], stateVector[2]);
     return pos;
 }
 
-Eigen::Quaterniond UKF::direction()
+Eigen::Vector3d UKF::imuPosition(Eigen::VectorXd sigmaPoint)
+{
+    Eigen::Vector3d pos(sigmaPoint[0], sigmaPoint[1], sigmaPoint[2]);
+    return pos;
+}
+
+Eigen::Vector3d UKF::cameraPosition()
+{
+    Eigen::Vector3d position(stateVector[10], stateVector[11], stateVector[12]);
+    
+    Eigen::Matrix3d rotMat;
+    rotMat = imuDirection();
+    
+    Eigen::Vector3d translation;
+    translation = imuPosition();
+    
+    position = (rotMat * position) + translation;
+    
+    return position;
+}
+
+Eigen::Vector3d UKF::cameraPosition(Eigen::VectorXd sigmaPoint)
+{
+    Eigen::Vector3d position(sigmaPoint[10], sigmaPoint[11], sigmaPoint[12]);
+    
+    Eigen::Matrix3d rotMat;
+    rotMat = imuDirection(sigmaPoint);
+    
+    Eigen::Vector3d translation;
+    translation = imuPosition(sigmaPoint);
+    
+    position = (rotMat * position) + translation;
+    
+    return position;
+}
+
+Eigen::Quaterniond UKF::imuDirection()
 {
     Eigen::Quaterniond dir(stateVector[6], stateVector[7], stateVector[8], stateVector[9]);
     return dir;
 }
 
+Eigen::Quaterniond UKF::imuDirection(Eigen::VectorXd sigmaPoint)
+{
+    Eigen::Quaterniond dir(sigmaPoint[6], sigmaPoint[7], sigmaPoint[8], sigmaPoint[9]);
+    return dir;
+}
+
+Eigen::Quaterniond UKF::cameraDirection()
+{
+    Eigen::Quaterniond camDirection;
+    
+    Eigen::Quaterniond imu2CameraDirection(stateVector[13], stateVector[14], stateVector[15], stateVector[16]);
+    
+    camDirection = imu2CameraDirection * imuDirection();
+    
+    return camDirection;
+}
+
+Eigen::Quaterniond UKF::cameraDirection(Eigen::VectorXd sigmaPoint)
+{
+    Eigen::Quaterniond camDirection;
+    
+    Eigen::Quaterniond imu2CameraDirection(sigmaPoint[13], sigmaPoint[14], sigmaPoint[15], sigmaPoint[16]);
+    
+    camDirection = imu2CameraDirection * imuDirection(sigmaPoint);
+    
+    return camDirection;
+}
+
 void UKF::draw()
 {
+    drawImu();
     drawCamera();
     
     Color::setColor(0.0, 0.0, 8.0);
@@ -66,27 +131,43 @@ void UKF::draw()
     }
 }
 
+void UKF::drawImu()
+{
+    glPushMatrix();
+    
+    glTranslated(imuPosition()[0], imuPosition()[1], imuPosition()[2]);
+    
+    Eigen::AngleAxisd aa;
+    aa = imuDirection();
+    glRotated(aa.angle() * 180.0 / simCamera.pi, aa.axis().x(), aa.axis().y(), aa.axis().z());
+    
+    Color::setColor(0.0, 0.0, 8.0); //blue
+    glutSolidCube(cubeWidth);
+    
+    glPopMatrix();
+}
+
 void UKF::drawCamera()
 {
     glPushMatrix();
     
-    glTranslated(position()[0], position()[1], position()[2]);
+    Eigen::Vector3d position = cameraPosition();
+    glTranslated(position.x(), position.y(), position.z());
     
     Eigen::AngleAxisd aa;
-    aa = direction();
-    glRotated(aa.angle() * 180.0 / simCamera.pi, aa.axis().x(), aa.axis().y(), aa.axis().z());
+    aa = cameraDirection();
+    glRotated(aa.angle() * 180.0 / PI, aa.axis().x(), aa.axis().y(), aa.axis().z());
     
     glBegin(GL_TRIANGLE_FAN);
-    
-    Color::setColor(0.8, 0.8, 0.8); //white
-    glVertex3d(0.0, 0.0, 0.0);
-    
-    Color::setColor(0.0, 0.0, 8.0); //blue
-    glVertex3d(-3.0, 3.0, simCamera.defaultFocalLengthDrawn);
-    glVertex3d(3.0, 3.0, simCamera.defaultFocalLengthDrawn);
-    glVertex3d(3.0, -3.0, simCamera.defaultFocalLengthDrawn);
-    glVertex3d(-3.0, -3.0, simCamera.defaultFocalLengthDrawn);
-    glVertex3d(-3.0, 3.0, simCamera.defaultFocalLengthDrawn);
+        Color::setColor(0.8, 0.8, 0.8); //white
+        glVertex3d(0.0, 0.0, 0.0);
+
+        Color::setColor(0.0, 0.0, 8.0); //blue
+        glVertex3d(-3.0, 3.0, simCamera.defaultFocalLengthDrawn);
+        glVertex3d(3.0, 3.0, simCamera.defaultFocalLengthDrawn);
+        glVertex3d(3.0, -3.0, simCamera.defaultFocalLengthDrawn);
+        glVertex3d(-3.0, -3.0, simCamera.defaultFocalLengthDrawn);
+        glVertex3d(-3.0, 3.0, simCamera.defaultFocalLengthDrawn);
     glEnd();
     
     glPopMatrix();
@@ -123,13 +204,19 @@ void UKF::initializeStateAndCovariance()
     Eigen::VectorXd state;
     state.resize(deviceStateSize);
     clear(state);
-    state.segment(0, 3) = simCamera.getPosition();
+    state.segment(0, 3) = simCamera.getImuPosition();
     state.segment(3, 3) = simCamera.getVelocity();
-    Eigen::Quaterniond dir = simCamera.getDirection();
-    state[6] = dir.w();
-    state[7] = dir.x();
-    state[8] = dir.y();
-    state[9] = dir.z();
+    Eigen::Quaterniond imuDir = simCamera.getImuDirection();
+    state[6] = imuDir.w();
+    state[7] = imuDir.x();
+    state[8] = imuDir.y();
+    state[9] = imuDir.z();
+    state.segment(10, 3) = simCamera.imu2CameraTranslation;
+    Eigen::Quaterniond camDirWrtImu = simCamera.imu2CameraDirection;
+    state[13] = camDirWrtImu.w();
+    state[14] = camDirWrtImu.x();
+    state[15] = camDirWrtImu.y();
+    state[16] = camDirWrtImu.z();
           
     Eigen::MatrixXd covariance;
     covariance.resize(state.rows(), state.rows());
@@ -140,10 +227,17 @@ void UKF::initializeStateAndCovariance()
     covariance(3,3) = simCamera.accelerationNoiseVariance[0]; // Velocity
     covariance(4,4) = simCamera.accelerationNoiseVariance[1];
     covariance(5,5) = simCamera.accelerationNoiseVariance[2];
-    covariance(6,6) = 0.0001; //Direction
+    covariance(6,6) = 0.0001; // IMU Direction
     covariance(7,7) = 0.0001;
     covariance(8,8) = 0.0001;
     covariance(9,9) = 0.0001;
+    covariance(10,10) = 0.0001; // IMU 2 Camera Translation in IMU coordinates
+    covariance(11,11) = 0.0001;
+    covariance(12,12) = 0.0001;
+    covariance(13,13) = 0.0001; // IMU 2 Camera Direction in IMU coordinates
+    covariance(14,14) = 0.0001;
+    covariance(15,15) = 0.0001;
+    covariance(16,16) = 0.0001;
     
     Measurement m = simCamera.measure();
     addNewLandmarks(m, state, covariance);
@@ -337,7 +431,7 @@ void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::Vec
     velocity[1] = sigmaPoint[4];
     velocity[2] = sigmaPoint[5];
     
-    Eigen::Quaterniond direction(sigmaPoint[6], sigmaPoint[7], sigmaPoint[8], sigmaPoint[9]);
+    Eigen::Quaterniond imuDir(sigmaPoint[6], sigmaPoint[7], sigmaPoint[8], sigmaPoint[9]);
 
     int stateSize = deviceStateSize + lmIndex.size() * landmarkSize;
     Eigen::Vector3d accelerationNoise;
@@ -358,7 +452,7 @@ void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::Vec
     velocity = velocity + timeSliceVelocity;
     
     // Compute new direction
-    direction = getQuaternionFromAngVelocity(angVelocityControl, deltaT) * direction;
+    imuDir = getQuaternionFromAngVelocity(angVelocityControl, deltaT) * imuDir;
      
     // Put process results back into the sigma point.
     sigmaPoint[0] = position.x();
@@ -367,10 +461,10 @@ void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::Vec
     sigmaPoint[3] = velocity.x();
     sigmaPoint[4] = velocity.y();
     sigmaPoint[5] = velocity.z();
-    sigmaPoint[6] = direction.w();
-    sigmaPoint[7] = direction.x();
-    sigmaPoint[8] = direction.y();
-    sigmaPoint[9] = direction.z();
+    sigmaPoint[6] = imuDir.w();
+    sigmaPoint[7] = imuDir.x();
+    sigmaPoint[8] = imuDir.y();
+    sigmaPoint[9] = imuDir.z();
     
     int inverseDepthNoiseIndex = stateSize + 5;
     for (std::map<int, std::vector<int> >::iterator iter = lmIndex.begin(); iter != lmIndex.end(); iter++)
@@ -501,11 +595,13 @@ Measurement UKF::predictMeasurement(Eigen::VectorXd sigmaPoint)
     Measurement m;
     
     Eigen::Vector3d camPosition;
-    camPosition[0] = sigmaPoint[0];
-    camPosition[1] = sigmaPoint[1];
-    camPosition[2] = sigmaPoint[2];
+//    camPosition[0] = sigmaPoint[0];
+//    camPosition[1] = sigmaPoint[1];
+//    camPosition[2] = sigmaPoint[2];
+    camPosition = cameraPosition(sigmaPoint);
     
-    Eigen::Quaterniond camDirection(sigmaPoint[6], sigmaPoint[7], sigmaPoint[8], sigmaPoint[9]);
+    //Eigen::Quaterniond camDirection(sigmaPoint[6], sigmaPoint[7], sigmaPoint[8], sigmaPoint[9]);
+    Eigen::Quaterniond camDirection = cameraDirection(sigmaPoint);
     
     Eigen::Vector3d origin;
     Eigen::Vector3d direction;
@@ -585,8 +681,8 @@ bool UKF::measureLandmarks(Eigen::VectorXd sigmaPoint, Eigen::VectorXd& measurem
         }
         
         Eigen::Matrix3d rotMat;
-        Eigen::Quaterniond direction(sigmaPoint[6], sigmaPoint[7], sigmaPoint[8], sigmaPoint[9]);
-        rotMat = direction;
+        Eigen::Quaterniond imuDir(sigmaPoint[6], sigmaPoint[7], sigmaPoint[8], sigmaPoint[9]);
+        rotMat = imuDir;
         //rotMat = simCamera.direction;
         
         Eigen::Vector3d pixel;
@@ -828,9 +924,11 @@ void UKF::addLandmarks(Eigen::VectorXd& sigmaPoint)
     outState.conservativeResize(sigmaPoint.rows() + (outLandmarkSize - inLandmarkSize) * numNewLandmarks);
     
     Eigen::Vector3d origin;
-    origin << sigmaPoint[0], sigmaPoint[1], sigmaPoint[2];
+    //origin << sigmaPoint[0], sigmaPoint[1], sigmaPoint[2];
+    origin = cameraPosition(sigmaPoint);
     
-    Eigen::Quaterniond camDirection(sigmaPoint[6], sigmaPoint[7], sigmaPoint[8], sigmaPoint[9]);
+    //Eigen::Quaterniond camDirection(sigmaPoint[6], sigmaPoint[7], sigmaPoint[8], sigmaPoint[9]);
+    Eigen::Quaterniond camDirection = cameraDirection(sigmaPoint);
         
     int in = deviceStateSize + lmIndex.size() * landmarkSize;
     int out = deviceStateSize + lmIndex.size() * landmarkSize;
