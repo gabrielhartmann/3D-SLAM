@@ -103,4 +103,6 @@ inline double randomDouble(float min, double max)
 }
 
 static const double PI = 3.1415926535897932384626433832795028841971693993751058;
+static const double cubeWidth = 4.0;
+static const double axesCubeWidth = 2.0;
 #endif // !defined(LECTURE_372FC_UTILITIES)

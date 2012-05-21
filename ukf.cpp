@@ -58,9 +58,8 @@ void UKF::draw()
     for (int i=0; i < landmarks().size(); i++)
     {
         glPushMatrix();
-        //glTranslated(landmarks()[i].x(), landmarks()[i].y(), 0.0);
         glTranslated(landmarks()[i].x(), landmarks()[i].y(), landmarks()[i].z());
-        glutSolidCube(2.0);
+        glutSolidCube(cubeWidth);
         glPopMatrix();
     }
 }
@@ -71,7 +70,6 @@ void UKF::drawCamera()
     
     glTranslated(position()[0], position()[1], position()[2]);
     
-    //Eigen::AngleAxisd aa(90.0, Eigen::Vector3d::UnitY());
     Eigen::AngleAxisd aa;
     aa = direction();
     glRotated(aa.angle() * 180.0 / simCamera.pi, aa.axis().x(), aa.axis().y(), aa.axis().z());
@@ -79,24 +77,13 @@ void UKF::drawCamera()
     glBegin(GL_TRIANGLE_FAN);
     
     Color::setColor(0.8, 0.8, 0.8); //white
-    //glColor3d(0.8, 0.8, 0.8);
-    //glNormal3d(0.0, 0.0, 1.0);
     glVertex3d(0.0, 0.0, 0.0);
     
     Color::setColor(0.0, 0.0, 8.0); //blue
-    //glNormal3d(-3.0, 3.0, 0.0);
     glVertex3d(-3.0, 3.0, simCamera.defaultFocalLengthDrawn);
-    
-    //glNormal3d(3.0, 3.0, 0.0);
     glVertex3d(3.0, 3.0, simCamera.defaultFocalLengthDrawn);
-    
-     //glNormal3d(3.0, -3.0, 0.0);
     glVertex3d(3.0, -3.0, simCamera.defaultFocalLengthDrawn);
-      
-    //glNormal3d(-3.0, -3.0, 0.0);
     glVertex3d(-3.0, -3.0, simCamera.defaultFocalLengthDrawn);
-            
-    //glNormal3d(3.0, 3.0, 0.0);
     glVertex3d(-3.0, 3.0, simCamera.defaultFocalLengthDrawn);
     glEnd();
     

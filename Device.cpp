@@ -199,7 +199,7 @@ void Device::draw()
         
         glPushMatrix();
         glTranslated(simScene.landmarks[i].x(), simScene.landmarks[i].y(), simScene.landmarks[i].z());
-        glutSolidCube(simScene.cubeWidth);
+        glutSolidCube(cubeWidth);
         glPopMatrix();
     }
     

@@ -18,8 +18,7 @@ class SimScene
 {
 public:
     SimScene();
-    std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> > landmarks;
-    static const double cubeWidth = 2.0;
+    std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> > landmarks;    
     void draw();
     void drawAxes();
 private:

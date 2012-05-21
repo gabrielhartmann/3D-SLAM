@@ -1,4 +1,5 @@
 #include "simScene.hpp"
+#include "Utilities.h"
 
 SimScene::SimScene()
 {
@@ -37,7 +38,7 @@ void SimScene::drawAxes()
 {
     //Draw origin
     Color::setColor(0.8, 0.8, 0.8); //white
-    glutSolidCube(cubeWidth);
+    glutSolidCube(axesCubeWidth);
     
     //Draw x axis
     for (int i=1; i<axesLength; i++)
@@ -49,8 +50,8 @@ void SimScene::drawAxes()
             Color::setColor(0.8, 0.8, 0.8); //white
         }
         glPushMatrix();
-        glTranslated(i * cubeWidth, 0.0, 0.0);
-        glutSolidCube(cubeWidth);
+        glTranslated(i * axesCubeWidth, 0.0, 0.0);
+        glutSolidCube(axesCubeWidth);
         glPopMatrix();
     }
     
@@ -64,8 +65,8 @@ void SimScene::drawAxes()
             Color::setColor(0.8, 0.8, 0.8); //white
         }
         glPushMatrix();
-        glTranslated(0.0, i * cubeWidth, 0.0);
-        glutSolidCube(cubeWidth);
+        glTranslated(0.0, i * axesCubeWidth, 0.0);
+        glutSolidCube(axesCubeWidth);
         glPopMatrix();
     }
     
@@ -79,8 +80,8 @@ void SimScene::drawAxes()
             Color::setColor(0.8, 0.8, 0.8); //white
         }
         glPushMatrix();
-        glTranslated(0.0, 0.0,  i * cubeWidth);
-        glutSolidCube(cubeWidth);
+        glTranslated(0.0, 0.0,  i * axesCubeWidth);
+        glutSolidCube(axesCubeWidth);
         glPopMatrix();
     }
 }

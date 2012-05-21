@@ -141,7 +141,7 @@ build/Debug/GNU-Linux-x86/simScene.o: simScene.cpp simScene.hpp \
  /usr/include/eigen3/Eigen/src/Eigenvalues/ComplexEigenSolver.h \
  /usr/include/eigen3/Eigen/src/Eigenvalues/./ComplexSchur.h \
  /usr/include/eigen3/Eigen/src/Eigenvalues/MatrixBaseEigenvalues.h \
- Color.hpp
+ Color.hpp Utilities.h Measurement.hpp
 
 simScene.hpp:
 
@@ -436,3 +436,7 @@ simScene.hpp:
 /usr/include/eigen3/Eigen/src/Eigenvalues/MatrixBaseEigenvalues.h:
 
 Color.hpp:
+
+Utilities.h:
+
+Measurement.hpp:
