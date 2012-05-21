@@ -21,6 +21,8 @@ void UKF::initialize()
 
     lmIndex.clear();
     
+    fov = PI;
+    
     initializeStateAndCovariance();    
 }
 
@@ -522,7 +524,7 @@ Measurement UKF::predictMeasurement(Eigen::VectorXd sigmaPoint)
         inverseDepth = sigmaPoint[index+5];
         
         Eigen::Vector3d euclideanLandmark = origin + (1.0/inverseDepth) * direction;
-        if (visible(camPosition, camDirection, simCamera.fov, euclideanLandmark))
+        if (visible(camPosition, camDirection, fov, euclideanLandmark))
         {
             Eigen::Matrix3d rotMat;
             rotMat = camDirection;

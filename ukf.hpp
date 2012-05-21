@@ -40,6 +40,7 @@ private:
     const static int landmarkSize = 6; // origin(3), theta, phi, inverse dpeth
     const static int processNoiseSize = 6; // translational accleration (3), angular velocity (3)
     const static double defaultDepth = 10000.0;
+    double fov;
     
     std::map<int, std::vector<int> > lmIndex;
     

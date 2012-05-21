@@ -14,7 +14,7 @@ SimScene::SimScene()
     depth = 2;
 
     Eigen::Vector3d origin;
-    origin << 150.0, -space * (height - 1) / 2.0 + 10.0, -space * (depth - 1) / 2.0;
+    origin << 100.0, -space * (height - 1) / 2.0 + 10.0, -space * (depth - 1) / 2.0;
     
     for (int x=0; x<width; x++)
     {
