@@ -41,7 +41,7 @@ private:
     const static int processNoiseSize = 6; // translational accleration (3), angular velocity (3)
     const static double defaultDepth = 100.0;
     
-    std::map<int, int> lmIndex;
+    std::map<int, std::vector<int> > lmIndex;
     
     Eigen::VectorXd stateVector;
     Eigen::MatrixXd stateCovariance;
@@ -49,6 +49,8 @@ private:
     void initializeStateAndCovariance();
     Eigen::MatrixXd getMeasurementCovariance(int rows);   
     Eigen::MatrixXd getProcessCovariance();
+    
+    int numUninitializedLandmarks();
     
     void normalizeDirection();
     void augment();
@@ -66,10 +68,12 @@ private:
     Measurement filterNewLandmarks(Measurement &actualMeasurement);
     void removeZero(Eigen::MatrixXd &mat, double val);
     
-    const static double inverseDepthVariance = 0.0000000001;
+    //const static double inverseDepthVariance = 0.0000000001;
+    const static double inverseDepthVariance = 0.00001;
     const static double focalLengthVariance = 0.0001;
     const static double accelerationVariance = 0.0625;
     const static double measurementVariance = 0.025;
+    const static int initializeSteps = 10;
     
     int filterStepCount;
         

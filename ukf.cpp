@@ -22,7 +22,6 @@ void UKF::initialize()
     lmIndex.clear();
     
     initializeStateAndCovariance();    
-    getProcessCovariance();
 }
 
 void UKF::step(double timeStep, Eigen::VectorXd control, Measurement m)
@@ -166,7 +165,7 @@ void UKF::initializeStateAndCovariance()
     stateCovariance.resize(covariance.rows(), covariance.cols());
     stateCovariance = covariance;
     
-    removeZero(stateCovariance, 0.1);
+    removeZero(stateCovariance, 0.001);
     
     print("State:", stateVector);
     printf("\n");
@@ -176,28 +175,41 @@ void UKF::initializeStateAndCovariance()
 
 Eigen::MatrixXd UKF::getProcessCovariance()
 {
+    int numUninitLandmarks = numUninitializedLandmarks();
+    //printf("Number of uninitialized landmarks = %d\n", numUninitLandmarks);
+    
     Eigen::MatrixXd processCovariance;
-    
-    processCovariance.resize(processNoiseSize + lmIndex.size(), processNoiseSize + lmIndex.size());
+    processCovariance.resize(processNoiseSize + numUninitLandmarks, processNoiseSize + numUninitLandmarks);
     clear(processCovariance);
-    
+
     processCovariance(0,0) = simCamera.accelerationNoiseVariance[0] ; // Acceleration Noise
     processCovariance(1,1) = simCamera.accelerationNoiseVariance[1];
     processCovariance(2,2) = simCamera.accelerationNoiseVariance[2];
-    
+
     processCovariance(3,3) = simCamera.angVelocityNoiseVariance[0]; // Angular Velocity Noise
     processCovariance(4,4) = simCamera.angVelocityNoiseVariance[1];
     processCovariance(5,5) = simCamera.angVelocityNoiseVariance[2];
-    
+
     for (int i=6; i<processCovariance.rows(); i++)
     {
         processCovariance(i,i) = inverseDepthVariance;
     }
     
-//    print("Process Covariance:", processCovariance);
-//    printf("\n");
-    
     return processCovariance;
+}
+
+int UKF::numUninitializedLandmarks()
+{
+    int count = 0;
+    for (std::map<int, std::vector<int> >::iterator iter = lmIndex.begin(); iter != lmIndex.end(); iter++)
+    {
+        if (iter->second[1] > 0)
+        {
+            count ++;
+        }
+    }
+    
+    return count;
 }
 
 int UKF::getLandmarkIndex(int i)
@@ -296,28 +308,6 @@ void UKF::augment()
     stateCovariance = tmpCovariance;
 }
 
-//void UKF::augmentStateVector()
-//{
-//    int stateSize = stateVector.rows();
-//    stateVector.conservativeResize(stateVector.rows() + processNoiseSize);
-//    //Reset all noise to 0 in State
-//    for (int i=stateSize; i<stateVector.rows(); i++)
-//    {
-//        stateVector(i) = 0.0;
-//    }
-//}
-//
-//void UKF::augmentStateCovariance()
-//{
-//    Eigen::MatrixXd tmpCovariance;
-//    tmpCovariance.resize(stateVector.rows(), stateVector.rows());
-//    clear(tmpCovariance);
-//    tmpCovariance.block(0,0, stateCovariance.rows(), stateCovariance.cols()) = stateCovariance;
-//    tmpCovariance.block(stateCovariance.rows(), stateCovariance.cols(), processCovariance.rows(), processCovariance.cols()) = processCovariance;
-//    
-//    stateCovariance = tmpCovariance;
-//}
-
 /////////////////////////////////////////////////////////////////////////////////////////////
 //                           PROCESS UPDATE WITH CONTROL
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -336,6 +326,12 @@ void UKF::processUpdate(double deltaT, Eigen::VectorXd control)
     }  
     
     normalizeDirection();
+    
+    //Decrement number of initialization steps needed
+    for (std::map<int, std::vector<int> >::iterator iter = lmIndex.begin(); iter != lmIndex.end(); iter++)
+    {
+        iter->second[1]--;
+    }
     
     generateSigmaPoints(stateVector, stateCovariance, sigmaPoints);
 }
@@ -387,12 +383,17 @@ void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::Vec
     sigmaPoint[8] = direction.y();
     sigmaPoint[9] = direction.z();
     
-    // Add inverse depth noise
-    for (int i = 0; i < lmIndex.size(); i++)
+    int inverseDepthNoiseIndex = stateSize + 5;
+    for (std::map<int, std::vector<int> >::iterator iter = lmIndex.begin(); iter != lmIndex.end(); iter++)
     {
-        int inverseDepthIndex = getLandmarkIndex(i) + 5;
-        int inverseDepthNoiseIndex = stateSize + 6 + i;
-        sigmaPoint[inverseDepthIndex] = sigmaPoint[inverseDepthIndex] + sigmaPoint[inverseDepthNoiseIndex];
+        if (iter->second[1] > 0)
+        {
+            // Add inverse depth noise
+            int inverseDepthIndex = iter->second[0] + 5;
+            inverseDepthNoiseIndex++;
+            double inverseDepthNoise = sigmaPoint[inverseDepthNoiseIndex];
+            sigmaPoint[inverseDepthIndex] = sigmaPoint[inverseDepthIndex] + inverseDepthNoise;
+        }
     }
 }
 
@@ -402,7 +403,7 @@ Measurement UKF::filterNewLandmarks(Measurement &actualMeasurement)
     Measurement newLandmarks;
     
     // Remove all known landmarks from measurement
-    for (std::map<int, int>::iterator iter = lmIndex.begin(); iter != lmIndex.end(); iter++)
+    for (std::map<int, std::vector<int> >::iterator iter = lmIndex.begin(); iter != lmIndex.end(); iter++)
     {
         if (tmpMeasurement.contains(iter->first))
         {
@@ -521,9 +522,9 @@ Measurement UKF::predictMeasurement(Eigen::VectorXd sigmaPoint)
     Eigen::Vector3d direction;
     double inverseDepth;
     
-    for(std::map<int,int>::iterator iter = lmIndex.begin(); iter != lmIndex.end(); iter++)
+    for(std::map<int, std::vector<int> >::iterator iter = lmIndex.begin(); iter != lmIndex.end(); iter++)
     {
-        int index = iter->second;
+        int index = iter->second[0];
         origin[0] = sigmaPoint[index];
         origin[1] = sigmaPoint[index + 1];
         origin[2] = sigmaPoint[index + 2];
@@ -905,6 +906,10 @@ void UKF::addNewLandmarks(Measurement m, Eigen::VectorXd& state, Eigen::MatrixXd
      
      for (int i=0; i<tags.size(); i++)
      {
-         lmIndex[tags[i]] = getLandmarkIndex(initialNumLandmarks + i);
+         std::vector<int> indexAndInit;
+         indexAndInit.push_back(getLandmarkIndex(initialNumLandmarks + i));
+         int initSteps = initializeSteps;
+         indexAndInit.push_back(initSteps);
+         lmIndex[tags[i]] = indexAndInit;
      }
 }
