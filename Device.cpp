@@ -27,9 +27,9 @@ Device::Device(SimScene simScene)
     imu2CameraDirection = aa2;
      
     //defaultTimeStep = 0.033;
-    defaultTimeStep = 0.033;
-    sizeScale = 100;
-    fov = pi / 4.0;
+    defaultTimeStep = 0.066;
+    sizeScale = 20;
+    fov = pi / 3.0;
     
     this->simScene = simScene;
     
