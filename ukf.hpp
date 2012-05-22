@@ -46,7 +46,7 @@ private:
     const static int landmarkSize = 6; // origin(3), theta, phi, inverse dpeth
     const static int processNoiseSize = 6; // translational accleration (3), angular velocity (3)
     //const static double defaultDepth = 10000.0;
-    const static double defaultDepth = 300.0;
+    const static double defaultDepth = 1000.0;
     double fov;
     
     std::map<int, std::vector<int> > lmIndex;
@@ -77,11 +77,11 @@ private:
     void removeZero(Eigen::MatrixXd &mat, double val);
     
     //const static double inverseDepthVariance = 0.0000000001;
-    const static double inverseDepthVariance = 0.00001;
+    const static double inverseDepthVariance = 0.0000001;
     const static double focalLengthVariance = 0.0001;
     const static double accelerationVariance = 0.0625;
     const static double measurementVariance = 0.025;
-    const static int initializeSteps = 10;
+    const static int initializeSteps = 7;
     
     int filterStepCount;
         

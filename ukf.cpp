@@ -211,7 +211,7 @@ void UKF::initializeStateAndCovariance()
     state[7] = imuDir.x();
     state[8] = imuDir.y();
     state[9] = imuDir.z();
-    state.segment(10, 3) = simCamera.imu2CameraTranslation;
+    state.segment(10, 3) = simCamera.imu2CameraTranslation * 0.0;
     Eigen::Quaterniond camDirWrtImu = simCamera.imu2CameraDirection;
     state[13] = camDirWrtImu.w();
     state[14] = camDirWrtImu.x();
@@ -231,9 +231,9 @@ void UKF::initializeStateAndCovariance()
     covariance(7,7) = 0.0001;
     covariance(8,8) = 0.0001;
     covariance(9,9) = 0.0001;
-    covariance(10,10) = 0.0001; // IMU 2 Camera Translation in IMU coordinates
-    covariance(11,11) = 0.0001;
-    covariance(12,12) = 0.0001;
+    covariance(10,10) = 60.0; // IMU 2 Camera Translation in IMU coordinates
+    covariance(11,11) = 1.0;
+    covariance(12,12) = 1.0;
     covariance(13,13) = 0.0001; // IMU 2 Camera Direction in IMU coordinates
     covariance(14,14) = 0.0001;
     covariance(15,15) = 0.0001;
