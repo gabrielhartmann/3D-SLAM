@@ -8,8 +8,8 @@ SimScene::SimScene()
 
     // CUBE
     int width, height, depth;
-    double space = 90;
-    width = 2;
+    double space = 70;
+    width = 3;
     height = 3;
     depth = 3;
 

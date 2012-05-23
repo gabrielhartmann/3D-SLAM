@@ -27,9 +27,9 @@ Device::Device(SimScene simScene)
     imu2CameraDirection = aa2;
      
     //defaultTimeStep = 0.033;
-    defaultTimeStep = 0.066;
+    defaultTimeStep = 0.033;
     sizeScale = 20;
-    fov = pi / 3.0;
+    fov = pi / 5.0;
     
     this->simScene = simScene;
     
@@ -228,7 +228,7 @@ void Device::draw()
         Eigen::Vector3d lm;
         lm << simScene.landmarks[i].x(), simScene.landmarks[i].y(), simScene.landmarks[i].z();
         
-        if (visible(getImuPosition(), getImuDirection(), fov, lm))
+        if (visible(getCameraPosition(), getCameraDirection(), fov, lm))
         {
             Color::setColor(0.0, 0.8, 0.0); // Green    
         }
