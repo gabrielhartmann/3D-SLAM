@@ -9,12 +9,17 @@ SimScene::SimScene()
     // CUBE
     int width, height, depth;
     double space = 70;
-    width = 3;
-    height = 3;
-    depth = 3;
+    width = 2;
+    height = 2;
+    depth = 2;
 
     Eigen::Vector3d origin;
-    origin << 200.0, -space * (height - 1) / 2.0 + 10.0, -space * (depth - 1) / 2.0;
+    origin << -space * (width - 1) / 2.0, -space * (height - 1) / 2.0, -space * (depth - 1) / 2.0;
+    
+    Eigen::Vector3d offset;
+    offset << 0.0, 0.0, 0.0;
+    
+    origin = origin + offset;
     
     for (int x=0; x<width; x++)
     {

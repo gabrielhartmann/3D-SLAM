@@ -15,7 +15,8 @@ Device::Device(SimScene simScene)
     angVelocityNoiseMean << 0.0, 0.0, 0.0;
     angVelocityNoiseVariance << 0.001, 0.001, 0.001;
     
-    Eigen::AngleAxisd aa(pi / 2.0, Eigen::Vector3d::UnitY());
+    //Eigen::AngleAxisd aa(pi / 2.0, Eigen::Vector3d::UnitY());
+    Eigen::AngleAxisd aa(0.0, Eigen::Vector3d::UnitY());
     initialImuDirection = aa;
     defaultFocalLength = 1.0;
     intrinsicCalibrationMatrix << defaultFocalLength, 0.0, 0.0,
@@ -23,12 +24,13 @@ Device::Device(SimScene simScene)
                                                      0.0, 0.0, 1.0;
     
     imu2CameraTranslation << -20.0, 0.0, 0.0;
-    Eigen::AngleAxisd aa2(0.0, Eigen::Vector3d::UnitY());
+    //Eigen::AngleAxisd aa2(0.0, Eigen::Vector3d::UnitY());
+    Eigen::AngleAxisd aa2(pi, Eigen::Vector3d::UnitY());
     imu2CameraDirection = aa2;
      
     //defaultTimeStep = 0.033;
     defaultTimeStep = 0.033;
-    sizeScale = 20;
+    sizeScale = 250;
     fov = pi / 5.0;
     
     this->simScene = simScene;
@@ -181,6 +183,7 @@ Eigen::Vector3d Device::getAngularVelocity()
     Eigen::Vector3d angVelocity;
     //angVelocity[0] = -2.0 * pi;
     angVelocity[0] = -1.0;
+    angVelocity[0] = 1.0;
     angVelocity[1] = 0.0;
     angVelocity[2] = 0.0;
     
