@@ -100,7 +100,7 @@ Eigen::Quaterniond UKF::cameraDirection()
     
     Eigen::Quaterniond imu2CameraDirection(stateVector[13], stateVector[14], stateVector[15], stateVector[16]);
     
-    camDirection = imu2CameraDirection * imuDirection();
+    camDirection = imuDirection() * imu2CameraDirection;
     
     return camDirection;
 }
@@ -111,7 +111,7 @@ Eigen::Quaterniond UKF::cameraDirection(Eigen::VectorXd sigmaPoint)
     
     Eigen::Quaterniond imu2CameraDirection(sigmaPoint[13], sigmaPoint[14], sigmaPoint[15], sigmaPoint[16]);
     
-    camDirection = imu2CameraDirection * imuDirection(sigmaPoint);
+    camDirection =  imuDirection(sigmaPoint) * imu2CameraDirection;
     
     return camDirection;
 }

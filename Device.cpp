@@ -30,8 +30,8 @@ Device::Device(SimScene simScene)
      
     //defaultTimeStep = 0.033;
     defaultTimeStep = 0.033;
-    sizeScale = 250;
-    fov = pi / 5.0;
+    sizeScale = 150;
+    fov = pi / 2.0;
     
     this->simScene = simScene;
     
@@ -173,7 +173,8 @@ Eigen::Quaterniond Device::getCameraDirection()
 {
     Eigen::Quaterniond camDirection;
     
-    camDirection = imu2CameraDirection * getImuDirection();
+    //camDirection = imu2CameraDirection * getImuDirection();
+    camDirection = getImuDirection() * imu2CameraDirection;
     
     return camDirection;
 }
@@ -183,7 +184,6 @@ Eigen::Vector3d Device::getAngularVelocity()
     Eigen::Vector3d angVelocity;
     //angVelocity[0] = -2.0 * pi;
     angVelocity[0] = -1.0;
-    angVelocity[0] = 1.0;
     angVelocity[1] = 0.0;
     angVelocity[2] = 0.0;
     
