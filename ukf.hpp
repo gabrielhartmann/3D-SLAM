@@ -42,12 +42,16 @@ public:
     std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> > landmarks();
     
 private:
-    const static int deviceStateSize = 17; // position(3), velocity(3), direction(4), imu2CameraT(3), imu2CameraQ(4)
-    const static int landmarkSize = 6; // origin(3), theta, phi, inverse dpeth
-    const static int processNoiseSize = 6; // translational accleration (3), angular velocity (3)
-    //const static double defaultDepth = 10000.0;
+    const static int deviceStateSize = 23; // position(3), velocity(3), direction(4), imu2CameraT(3), imu2CameraQ(4), accBias(3), gyroBias(3)
+    const static int landmarkSize = 6; // origin(3), theta, phi, inverse depth
+    const static int processNoiseSize = 12; // translational acceleration (3), angular velocity (3), accelerometer bias(3), gyroscope bias(3)
     const static double defaultDepth = 100.0;
     double fov;
+    const static double initialAccBias = 0.0;
+    const static double initialGyroBias = 0.0;
+    const static double accBiasVariance = 0.001;
+    const static double gyroBiasVariance = 0.001;
+    
     
     std::map<int, std::vector<int> > lmIndex;
     

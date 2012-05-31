@@ -7,13 +7,13 @@ Device::Device(){}
 Device::Device(SimScene simScene)
 {    
     measurementNoiseMean << 0.0, 0.0, 0.0;
-    measurementNoiseVariance << 0.00001, 0.00001, 0.00001;
+    measurementNoiseVariance << 0.0001, 0.0001, 0.0001;
     
     accelerationNoiseMean << 0.0, 0.0, 0.0;
-    accelerationNoiseVariance << 0.001, 0.001, 0.001;
+    accelerationNoiseVariance << 0.01, 0.01, 0.01;
     
     angVelocityNoiseMean << 0.0, 0.0, 0.0;
-    angVelocityNoiseVariance << 0.001, 0.001, 0.001;
+    angVelocityNoiseVariance << 0.01, 0.01, 0.01;
     
     //Eigen::AngleAxisd aa(pi / 2.0, Eigen::Vector3d::UnitY());
     Eigen::AngleAxisd aa(0.0, Eigen::Vector3d::UnitY());
@@ -270,7 +270,7 @@ void Device::drawAcceleration()
     glPushMatrix();
     glTranslated(getImuPosition().x(), getImuPosition().y(), getImuPosition().z());
     
-    Color::setColor(0.0, 0.8, 0.0); // green
+    Color::setColor(0.1, 0.1, 0.1); // black
     glLineWidth(4.0);
     glBegin(GL_LINES);
     glVertex3d(0.0, 0.0, 0.0);

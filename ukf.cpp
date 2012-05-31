@@ -33,7 +33,7 @@ void UKF::step(double timeStep, Eigen::VectorXd control, Measurement m)
     printf("======================================================================\n");  
     
     printf("Entering process update\n");
-    processUpdate(timeStep, control);  
+    processUpdate(timeStep, control);
     printf("Exiting process update\n");
     printf("Entering measurement update\n");
     measurementUpdate(m);
@@ -218,6 +218,12 @@ void UKF::initializeStateAndCovariance()
     state[14] = camDirWrtImu.x();
     state[15] = camDirWrtImu.y();
     state[16] = camDirWrtImu.z();
+    state[17] = initialAccBias;
+    state[18] = initialAccBias;
+    state[19] = initialAccBias;
+    state[20] = initialGyroBias;
+    state[21] = initialGyroBias;
+    state[22] = initialGyroBias;
           
     Eigen::MatrixXd covariance;
     covariance.resize(state.rows(), state.rows());
@@ -239,6 +245,12 @@ void UKF::initializeStateAndCovariance()
     covariance(14,14) = 0.0001;
     covariance(15,15) = 0.0001;
     covariance(16,16) = 0.0001;
+    covariance(17,17) = accBiasVariance; // Accelerometer bias
+    covariance(18,18) = accBiasVariance;
+    covariance(19,19) = accBiasVariance;
+    covariance(20,20) = gyroBiasVariance;
+    covariance(21,21) = gyroBiasVariance;
+    covariance(22,22) = gyroBiasVariance;
     
     Measurement m = simCamera.measure();
     addNewLandmarks(m, state, covariance);
@@ -273,8 +285,17 @@ Eigen::MatrixXd UKF::getProcessCovariance()
     processCovariance(3,3) = simCamera.angVelocityNoiseVariance[0]; // Angular Velocity Noise
     processCovariance(4,4) = simCamera.angVelocityNoiseVariance[1];
     processCovariance(5,5) = simCamera.angVelocityNoiseVariance[2];
+    
+    processCovariance(6,6) = accBiasVariance;
+    processCovariance(7,7) = accBiasVariance;
+    processCovariance(8,8) = accBiasVariance;
+    
+    processCovariance(9,9) = gyroBiasVariance;
+    processCovariance(10,10) = gyroBiasVariance;
+    processCovariance(11,11) = gyroBiasVariance;
+    
 
-    for (int i=6; i<processCovariance.rows(); i++)
+    for (int i=processNoiseSize; i<processCovariance.rows(); i++)
     {
         processCovariance(i,i) = inverseDepthVariance;
     }
@@ -445,14 +466,25 @@ void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::Vec
     angVelocityNoise[1] = sigmaPoint[stateSize + 4];
     angVelocityNoise[2] = sigmaPoint[stateSize + 5];
     
+    Eigen::Vector3d accBiasNoise;
+    accBiasNoise[0] = sigmaPoint[stateSize + 6];
+    accBiasNoise[1] = sigmaPoint[stateSize + 7];
+    accBiasNoise[2] = sigmaPoint[stateSize + 8];
+    
+    Eigen::Vector3d gyroBiasNoise;
+    gyroBiasNoise[0] = sigmaPoint[stateSize + 9];
+    gyroBiasNoise[1] = sigmaPoint[stateSize + 10];
+    gyroBiasNoise[2] = sigmaPoint[stateSize + 11];
+    
     Eigen::Vector3d accControl = control.segment(0, 3);
     Eigen::Vector3d angVelocityControl = control.segment(3,3);
     
-    Eigen::Vector3d timeSliceVelocity = (accControl + accelerationNoise) * deltaT;
+    Eigen::Vector3d timeSliceVelocity = (accControl - accelerationNoise) * deltaT;
     position = position + (velocity + timeSliceVelocity) * deltaT;
     velocity = velocity + timeSliceVelocity;
     
     // Compute new direction
+    angVelocityControl = angVelocityControl - angVelocityNoise;
     imuDir = getQuaternionFromAngVelocity(angVelocityControl, deltaT) * imuDir;
      
     // Put process results back into the sigma point.
@@ -466,6 +498,13 @@ void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::Vec
     sigmaPoint[7] = imuDir.x();
     sigmaPoint[8] = imuDir.y();
     sigmaPoint[9] = imuDir.z();
+    // Skip to biases
+    sigmaPoint[17] = sigmaPoint[17] + accBiasNoise[0] * deltaT;
+    sigmaPoint[18] = sigmaPoint[18] + accBiasNoise[1] * deltaT;
+    sigmaPoint[19] = sigmaPoint[19] + accBiasNoise[2] * deltaT;
+    sigmaPoint[20] = sigmaPoint[20] + gyroBiasNoise[0] * deltaT;
+    sigmaPoint[21] = sigmaPoint[21] + gyroBiasNoise[1] * deltaT;
+    sigmaPoint[22] = sigmaPoint[22] + gyroBiasNoise[2] * deltaT;
     
     int inverseDepthNoiseIndex = stateSize + 5;
     for (std::map<int, std::vector<int> >::iterator iter = lmIndex.begin(); iter != lmIndex.end(); iter++)

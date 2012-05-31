@@ -38,6 +38,7 @@ OBJECTFILES= \
 	${OBJECTDIR}/Device.o \
 	${OBJECTDIR}/main.o \
 	${OBJECTDIR}/Utilities.o \
+	${OBJECTDIR}/Measurement.o \
 	${OBJECTDIR}/io.o \
 	${OBJECTDIR}/Color.o \
 	${OBJECTDIR}/Trackball.o \
@@ -92,6 +93,11 @@ ${OBJECTDIR}/Utilities.o: Utilities.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} $@.d
 	$(COMPILE.cc) -O2 -MMD -MP -MF $@.d -o ${OBJECTDIR}/Utilities.o Utilities.cpp
+
+${OBJECTDIR}/Measurement.o: Measurement.cpp 
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} $@.d
+	$(COMPILE.cc) -O2 -MMD -MP -MF $@.d -o ${OBJECTDIR}/Measurement.o Measurement.cpp
 
 ${OBJECTDIR}/io.o: io.cpp 
 	${MKDIR} -p ${OBJECTDIR}
