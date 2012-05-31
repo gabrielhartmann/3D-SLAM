@@ -453,6 +453,16 @@ void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::Vec
     velocity[1] = sigmaPoint[4];
     velocity[2] = sigmaPoint[5];
     
+    Eigen::Vector3d accBias;
+    accBias[0] = sigmaPoint[17];
+    accBias[1] = sigmaPoint[18];
+    accBias[2] = sigmaPoint[19];
+    
+    Eigen::Vector3d gyroBias;
+    gyroBias[0] = sigmaPoint[20];
+    gyroBias[1] = sigmaPoint[21];
+    gyroBias[2] = sigmaPoint[22];
+    
     Eigen::Quaterniond imuDir(sigmaPoint[6], sigmaPoint[7], sigmaPoint[8], sigmaPoint[9]);
 
     int stateSize = deviceStateSize + lmIndex.size() * landmarkSize;
@@ -479,12 +489,12 @@ void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::Vec
     Eigen::Vector3d accControl = control.segment(0, 3);
     Eigen::Vector3d angVelocityControl = control.segment(3,3);
     
-    Eigen::Vector3d timeSliceVelocity = (accControl - accelerationNoise) * deltaT;
+    Eigen::Vector3d timeSliceVelocity = (accControl - accelerationNoise - accBias) * deltaT;
     position = position + (velocity + timeSliceVelocity) * deltaT;
     velocity = velocity + timeSliceVelocity;
     
     // Compute new direction
-    angVelocityControl = angVelocityControl - angVelocityNoise;
+    angVelocityControl = angVelocityControl - angVelocityNoise - gyroBias;
     imuDir = getQuaternionFromAngVelocity(angVelocityControl, deltaT) * imuDir;
      
     // Put process results back into the sigma point.

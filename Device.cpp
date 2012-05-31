@@ -9,10 +9,10 @@ Device::Device(SimScene simScene)
     measurementNoiseMean << 0.0, 0.0, 0.0;
     measurementNoiseVariance << 0.0001, 0.0001, 0.0001;
     
-    accelerationNoiseMean << 0.0, 0.0, 0.0;
+    accelerationNoiseMean << 0.5, 0.5, 0.5;
     accelerationNoiseVariance << 0.01, 0.01, 0.01;
     
-    angVelocityNoiseMean << 0.0, 0.0, 0.0;
+    angVelocityNoiseMean << 0.5, 0.5, 0.5;
     angVelocityNoiseVariance << 0.01, 0.01, 0.01;
     
     //Eigen::AngleAxisd aa(pi / 2.0, Eigen::Vector3d::UnitY());
@@ -69,7 +69,7 @@ void Device::timeStep()
      Eigen::Vector3d acceleration = getAcceleration();
      addNoise(acceleration, accelerationNoiseMean, accelerationNoiseVariance);
      Eigen::Vector3d angVelocity = getAngularVelocity();
-     addNoise(angVelocity, accelerationNoiseMean, accelerationNoiseVariance);
+     addNoise(angVelocity, angVelocityNoiseMean, angVelocityNoiseVariance);
      
      Eigen::VectorXd control;
      control.resize(acceleration.rows() + angVelocity.rows());
