@@ -9,9 +9,11 @@ Device::Device(SimScene simScene)
     measurementNoiseMean << 0.0, 0.0, 0.0;
     measurementNoiseVariance << 0.0001, 0.0001, 0.0001;
     
+    //accelerationNoiseMean << 0.5, 0.5, 0.5;
     accelerationNoiseMean << 0.5, 0.5, 0.5;
     accelerationNoiseVariance << 0.01, 0.01, 0.01;
     
+    //angVelocityNoiseMean << 0.5, 0.5, 0.5;
     angVelocityNoiseMean << 0.5, 0.5, 0.5;
     angVelocityNoiseVariance << 0.01, 0.01, 0.01;
     
@@ -26,16 +28,45 @@ Device::Device(SimScene simScene)
     imu2CameraTranslation << -20.0, 0.0, 0.0;
     //Eigen::AngleAxisd aa2(0.0, Eigen::Vector3d::UnitY());
     Eigen::AngleAxisd aa2(pi, Eigen::Vector3d::UnitY());
+    //Eigen::AngleAxisd aa2(pi/2.0, Eigen::Vector3d::UnitY());
     imu2CameraDirection = aa2;
      
     //defaultTimeStep = 0.033;
     defaultTimeStep = 0.033;
-    sizeScale = 150;
-    fov = pi / 2.0;
+    sizeScale = 250;
+    fov = pi / 3.0;
     
     this->simScene = simScene;
     
     reset();
+}
+
+Eigen::VectorXd Device::getState()
+{
+    Eigen::VectorXd state;
+    state.resize(14 + 3 * simScene.landmarks.size());
+    
+    state.segment(0,3) = getImuPosition();
+    Eigen::Quaterniond imuDir;
+    imuDir = getImuDirection();
+    state[3] = imuDir.w();
+    state[4] = imuDir.x();
+    state[5] = imuDir.y();
+    state[6] = imuDir.z();
+    state.segment(7, 3) = getCameraPosition();
+    Eigen::Quaterniond camDir;
+    camDir = getCameraDirection();
+    state[10] = camDir.w();
+    state[11] = camDir.x();
+    state[12] = camDir.y();
+    state[13] = camDir.z();
+    
+    for (int i=0; i<simScene.landmarks.size(); i++)
+    {
+        state.segment(14 + i * 3, 3) = simScene.landmarks[i];
+    }
+    
+    return state;
 }
 
 void Device::reset()

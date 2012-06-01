@@ -29,7 +29,7 @@ public:
     UKF();
     UKF(Device simCamera, SimScene scene);
     void initialize();
-    void step(double timeStep, Eigen::VectorXd control, Measurement m);
+    Eigen::VectorXd step(double timeStep, Eigen::VectorXd control, Measurement m);
     Eigen::Vector3d imuPosition();
     Eigen::Vector3d imuPosition(Eigen::VectorXd sigmaPoint);
     Eigen::Vector3d cameraPosition();
@@ -40,6 +40,8 @@ public:
     Eigen::Quaterniond cameraDirection(Eigen::VectorXd sigmaPoint);
     void draw();
     std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> > landmarks();
+    
+    Eigen::VectorXd getState();
     
 private:
     const static int deviceStateSize = 23; // position(3), velocity(3), direction(4), imu2CameraT(3), imu2CameraQ(4), accBias(3), gyroBias(3)
@@ -81,10 +83,11 @@ private:
     void removeZero(Eigen::MatrixXd &mat, double val);
     
     //const static double inverseDepthVariance = 0.0000000001;
-    const static double inverseDepthVariance = 0.00001;
+    const static double inverseDepthVariance = 0.0000001;
     const static double focalLengthVariance = 0.0001;
     const static double accelerationVariance = 0.0625;
     const static double measurementVariance = 0.025;
+    //const static int initializeSteps = 5;
     const static int initializeSteps = 5;
     
     int filterStepCount;

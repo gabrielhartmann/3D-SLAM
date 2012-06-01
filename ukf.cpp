@@ -26,18 +26,51 @@ void UKF::initialize()
     initializeStateAndCovariance();    
 }
 
-void UKF::step(double timeStep, Eigen::VectorXd control, Measurement m)
+Eigen::VectorXd UKF::getState()
+{
+    Eigen::VectorXd state;
+    int numLandmarks = (stateVector.rows() - deviceStateSize) / landmarkSize;
+    
+    state.resize(14 + 3*numLandmarks); // imuPos(3) imuDir(4) camPos(3) camDir(4)
+    state.segment(0, 3) = imuPosition();
+    Eigen::Quaterniond imuDir;
+    imuDir = imuDirection();
+    state[3] = imuDir.w();
+    state[4] = imuDir.x();
+    state[5] = imuDir.y();
+    state[6] = imuDir.z();
+    state.segment(7, 3) = cameraPosition();
+    Eigen::Quaterniond camDir;
+    camDir = cameraDirection();
+    state[10] = camDir.w();
+    state[11] = camDir.x();
+    state[12] = camDir.y();
+    state[13] = camDir.z();
+    
+    
+    for (int i=0; i<numLandmarks; i++)
+    {
+        state.segment(14 + i * 3, 3) = getEuclideanLandmark(i);
+    }
+    
+    return state;
+}
+
+Eigen::VectorXd UKF::step(double timeStep, Eigen::VectorXd control, Measurement m)
 {
     printf("======================================================================\n");
     printf("                                %d                                    \n", ++filterStepCount);
     printf("======================================================================\n");  
-    
+       
     printf("Entering process update\n");
     processUpdate(timeStep, control);
     printf("Exiting process update\n");
     printf("Entering measurement update\n");
     measurementUpdate(m);
     printf("Exiting measurement update\n");
+    
+    //print("State Vector:", stateVector);
+    return stateVector;
 }
 
 Eigen::Vector3d UKF::imuPosition()
@@ -121,7 +154,7 @@ void UKF::draw()
     drawImu();
     drawCamera();
     
-    Color::setColor(0.0, 0.0, 8.0);
+    Color::setColor(0.0, 0.0, 0.8);
     for (int i=0; i < landmarks().size(); i++)
     {
         glPushMatrix();
@@ -141,7 +174,7 @@ void UKF::drawImu()
     aa = imuDirection();
     glRotated(aa.angle() * 180.0 / simCamera.pi, aa.axis().x(), aa.axis().y(), aa.axis().z());
     
-    Color::setColor(0.0, 0.0, 8.0); //blue
+    Color::setColor(0.0, 0.0, 0.9); //blue
     glutSolidCube(cubeWidth);
     
     glPopMatrix();
@@ -162,7 +195,7 @@ void UKF::drawCamera()
         Color::setColor(0.8, 0.8, 0.8); //white
         glVertex3d(0.0, 0.0, 0.0);
 
-        Color::setColor(0.0, 0.0, 8.0); //blue
+        Color::setColor(0.0, 0.0, 0.8); //blue
         glVertex3d(-3.0, 3.0, simCamera.defaultFocalLengthDrawn);
         glVertex3d(3.0, 3.0, simCamera.defaultFocalLengthDrawn);
         glVertex3d(3.0, -3.0, simCamera.defaultFocalLengthDrawn);
@@ -263,10 +296,10 @@ void UKF::initializeStateAndCovariance()
     
     removeZero(stateCovariance, 0.001);
     
-    print("State:", stateVector);
-    printf("\n");
-    print("Covariance:", stateCovariance);
-    printf("\n");
+//    print("State:", stateVector);
+//    printf("\n");
+//    print("Covariance:", stateCovariance);
+//    printf("\n");
 }
 
 Eigen::MatrixXd UKF::getProcessCovariance()
@@ -439,6 +472,15 @@ void UKF::processUpdate(double deltaT, Eigen::VectorXd control)
     }
     
     generateSigmaPoints(stateVector, stateCovariance, sigmaPoints);
+    
+    Eigen::Vector3d accBias;
+    accBias[0] = stateVector[17];
+    accBias[1] = stateVector[18];
+    accBias[2] = stateVector[19];
+    Eigen::Vector3d gyroBias;
+    gyroBias[0] = stateVector[20];
+    gyroBias[1] = stateVector[21];
+    gyroBias[2] = stateVector[22];
 }
 
 void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::VectorXd control)

@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdarg.h>
+#include <GL/freeglut_std.h>
 #include "Utilities.h"
 
 ////////////////////////////
@@ -346,4 +347,45 @@ std::vector<int> commonTags(std::vector<int> tags, Measurement m)
     }
     
     return cTags;
+}
+
+void drawCamera(Eigen::Vector3d pos, Eigen::Quaterniond dir, double focalLength, double r, double g, double b)
+{
+    glPushMatrix();
+    glTranslated(pos.x(), pos.y(), pos.z());
+    
+    Eigen::AngleAxisd aa;
+    aa = dir;
+    glRotated(aa.angle() * 180.0 / PI, aa.axis().x(), aa.axis().y(), aa.axis().z());
+    
+    glBegin(GL_TRIANGLE_FAN);
+        Color::setColor(0.8, 0.8, 0.8); //white
+        glVertex3d(0.0, 0.0, 0.0);
+
+        Color::setColor(r, g, b);
+        glVertex3d(-3.0, 3.0, focalLength);
+        glVertex3d(3.0, 3.0, focalLength);
+        glVertex3d(3.0, -3.0, focalLength);
+        glVertex3d(-3.0, -3.0, focalLength);
+        glVertex3d(-3.0, 3.0, focalLength);
+    glEnd();
+    
+    glPopMatrix();
+}
+
+void drawImu(Eigen::Vector3d pos, Eigen::Quaterniond dir, double cubeSize, double r, double g, double b)
+{
+    glPushMatrix();
+    glTranslated(pos.x(), pos.y(), pos.z());
+    
+    Eigen::AngleAxisd aa;
+    aa = dir;
+    glRotated(aa.angle() * 180.0 / PI, aa.axis().x(), aa.axis().y(), aa.axis().z());
+    
+    glBegin(GL_TRIANGLE_FAN);
+        Color::setColor(r, g, b);
+        glutSolidCube(cubeSize);
+    glEnd();
+    
+    glPopMatrix();
 }

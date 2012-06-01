@@ -26,6 +26,7 @@ class Device
 public:
     Device();
     Device(SimScene simScene);
+    Eigen::VectorXd getState();
     
     SimScene simScene;
     

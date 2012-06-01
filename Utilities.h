@@ -14,6 +14,7 @@
 #include <eigen3/Eigen/Geometry>
 #include <string>
 #include <vector>
+#include "Color.hpp"
 
 #include "Measurement.hpp"
 
@@ -105,4 +106,7 @@ inline double randomDouble(float min, double max)
 static const double PI = 3.1415926535897932384626433832795028841971693993751058;
 static const double cubeWidth = 4.0;
 static const double axesCubeWidth = 2.0;
+
+void drawCamera(Eigen::Vector3d pos, Eigen::Quaterniond dir, double focalLength, double r, double g, double b);
+void drawImu(Eigen::Vector3d pos, Eigen::Quaterniond dir, double cubeSize, double r, double g, double b);
 #endif // !defined(LECTURE_372FC_UTILITIES)
