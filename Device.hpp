@@ -38,9 +38,11 @@ public:
     Eigen::Vector3d getCameraPosition();
     Eigen::Vector3d getVelocity();
     Eigen::Vector3d getAcceleration();
+    Eigen::Vector3d getAccelerationDev();
     Eigen::Quaterniond getImuDirection();
     Eigen::Quaterniond getCameraDirection();
     Eigen::Vector3d getAngularVelocity();
+    Eigen::Vector3d getAngularVelocityDev();
     
     void draw();
     void drawVelocity();
@@ -58,6 +60,7 @@ public:
     
     Eigen::Quaterniond initialImuDirection;
     Eigen::Matrix3d intrinsicCalibrationMatrix;
+    Eigen::Matrix3d inverseK;
     
     Eigen::Vector3d imu2CameraTranslation;
     Eigen::Quaterniond imu2CameraDirection;

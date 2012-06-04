@@ -87,7 +87,6 @@ private:
     const static double focalLengthVariance = 0.0001;
     const static double accelerationVariance = 0.0625;
     const static double measurementVariance = 0.025;
-    //const static int initializeSteps = 5;
     const static int initializeSteps = 5;
     
     int filterStepCount;
@@ -119,12 +118,14 @@ private:
     Eigen::MatrixXd K;
     
     Eigen::Vector3d getEuclideanLandmark(int index);
+    Eigen::Vector3d getEuclideanLandmark(int index, Eigen::VectorXd sigmaPoint);
     void getAnglesFromDirection(Eigen::Vector3d direction, double &theta, double &phi);
     Eigen::Vector3d getDirectionFromAngles(double theta, double phi);
     Eigen::Quaterniond getQuaternionFromAngVelocity(Eigen::Vector3d angVelocity, double deltaT);
     
     void drawImu();
     void drawCamera();
+    void drawCamera(Eigen::VectorXd sigmaPoint);
     
     void unscentedTransform(Eigen::VectorXd& state, Eigen::MatrixXd& covariance, void (UKF::*process)(Eigen::VectorXd&));
     void unscentedTransform(Eigen::VectorXd& state, Eigen::MatrixXd& covariance, void (UKF::*process)(Eigen::VectorXd&, double), double deltaT);

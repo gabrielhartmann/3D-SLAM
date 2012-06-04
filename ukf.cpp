@@ -17,6 +17,7 @@ void UKF::initialize()
     filterStepCount = 0;
     
     alpha = 0.001;
+    //alpha = 10.0;
     beta = 2.0;
 
     lmIndex.clear();
@@ -154,7 +155,8 @@ void UKF::draw()
     drawImu();
     drawCamera();
     
-    Color::setColor(0.0, 0.0, 0.8);
+    // Draw landmarks
+    Color::setColor(0.0, 0.0, 0.8); // blue
     for (int i=0; i < landmarks().size(); i++)
     {
         glPushMatrix();
@@ -162,6 +164,26 @@ void UKF::draw()
         glutSolidCube(cubeWidth);
         glPopMatrix();
     }
+    
+    // Draw hypotheticals
+//    for (int i=0; i < sigmaPoints.size(); i++)
+//    {
+//        Color::setColor(0.0, 0.8, 0.8); // cyan
+//        //Draw hypothetical landmarks
+//        int numLandmarks = (sigmaPoints[i].rows() - deviceStateSize) / landmarkSize;
+//        for (int j=0; j<numLandmarks; j++)
+//        {
+//            Eigen::Vector3d lm;
+//            lm = getEuclideanLandmark(j, sigmaPoints[i]);
+//            glPushMatrix();
+//            glTranslated(lm.x(), lm.y(), lm.z());
+//            glutSolidCube(cubeWidth);
+//            glPopMatrix();
+//        }
+//        
+//        //Draw hypothetical camera positions
+//        drawCamera(sigmaPoints[i]);
+//    }
 }
 
 void UKF::drawImu()
@@ -206,6 +228,32 @@ void UKF::drawCamera()
     glPopMatrix();
 }
 
+void UKF::drawCamera(Eigen::VectorXd sigmaPoint)
+{
+    glPushMatrix();
+    
+    Eigen::Vector3d position = cameraPosition(sigmaPoint);
+    glTranslated(position.x(), position.y(), position.z());
+    
+    Eigen::AngleAxisd aa;
+    aa = cameraDirection(sigmaPoint);
+    glRotated(aa.angle() * 180.0 / PI, aa.axis().x(), aa.axis().y(), aa.axis().z());
+    
+    glBegin(GL_TRIANGLE_FAN);
+        Color::setColor(0.8, 0.8, 0.8); //white
+        glVertex3d(0.0, 0.0, 0.0);
+
+        Color::setColor(0.8, 0.0, 0.8); // magenta
+        glVertex3d(-3.0, 3.0, simCamera.defaultFocalLengthDrawn);
+        glVertex3d(3.0, 3.0, simCamera.defaultFocalLengthDrawn);
+        glVertex3d(3.0, -3.0, simCamera.defaultFocalLengthDrawn);
+        glVertex3d(-3.0, -3.0, simCamera.defaultFocalLengthDrawn);
+        glVertex3d(-3.0, 3.0, simCamera.defaultFocalLengthDrawn);
+    glEnd();
+    
+    glPopMatrix();
+}
+
 std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> > UKF::landmarks()
 {
     std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> > lms;
@@ -239,6 +287,7 @@ void UKF::initializeStateAndCovariance()
     clear(state);
     //state.segment(0, 3) = simCamera.getImuPosition();
     state.segment(0, 3) = simCamera.getImuPosition();
+    //state[2] = state[2] - 8.0;  // A translation so both devices are visible at start
     state.segment(3, 3) = simCamera.getVelocity();
     Eigen::Quaterniond imuDir = simCamera.getImuDirection();
     state[6] = imuDir.w();
@@ -452,7 +501,7 @@ void UKF::augment()
 void UKF::processUpdate(double deltaT, Eigen::VectorXd control)
 {
     int tmpStateSize = stateVector.rows();
-    augment();
+    augment();    
     unscentedTransform(stateVector, stateCovariance,  &UKF::processFunction, deltaT, control);
     
     // De-augment everything
@@ -530,6 +579,12 @@ void UKF::processFunction(Eigen::VectorXd& sigmaPoint, double deltaT, Eigen::Vec
     
     Eigen::Vector3d accControl = control.segment(0, 3);
     Eigen::Vector3d angVelocityControl = control.segment(3,3);
+    
+    // Convert to inputs to world coordinates
+    Eigen::Matrix3d rotMat;
+    rotMat = imuDir;
+    accControl = rotMat.transpose() * accControl;
+    angVelocityControl = rotMat.transpose() * angVelocityControl;    
     
     Eigen::Vector3d timeSliceVelocity = (accControl - accelerationNoise - accBias) * deltaT;
     position = position + (velocity + timeSliceVelocity) * deltaT;
@@ -684,6 +739,8 @@ Measurement UKF::predictMeasurements(Measurement &actualMeasurement)
 
 Measurement UKF::predictMeasurement(Eigen::VectorXd sigmaPoint)
 {
+    //printf("Predicting Measurement!\n");
+    
     Measurement m;
     
     Eigen::Vector3d camPosition;
@@ -724,7 +781,12 @@ Measurement UKF::predictMeasurement(Eigen::VectorXd sigmaPoint)
             pixel[2] = 1.0;
             pixel = simCamera.intrinsicCalibrationMatrix * pixel; //Projected landmark
             
-            m.add(iter->first, pixel[0], pixel[1]);
+            Eigen::Vector3d p;
+            p << pixel[0], pixel[1], 1.0;       
+            p = simCamera.inverseK * p;
+            
+            //m.add(iter->first, pixel[0], pixel[1]);
+            m.add(iter->first, p[0], p[1]);
         }
     }
     
@@ -861,6 +923,28 @@ Eigen::Vector3d UKF::getEuclideanLandmark(int index)
     phi     = stateVector[i+4];
     direction = getDirectionFromAngles(theta, phi);
     inverseDepth = stateVector[i+5];
+
+    Eigen::Vector3d euclideanLandmark = origin + ((1.0/inverseDepth) * direction);
+    
+    return euclideanLandmark;
+}
+
+Eigen::Vector3d UKF::getEuclideanLandmark(int index, Eigen::VectorXd sigmaPoint)
+{
+    int i = getLandmarkIndex(index);
+    
+    Eigen::Vector3d origin;
+    Eigen::Vector3d direction;
+    double inverseDepth;
+    
+    origin[0] = sigmaPoint[i];
+    origin[1] = sigmaPoint[i+1];
+    origin[2] = sigmaPoint[i+2];
+    double theta, phi;
+    theta = sigmaPoint[i+3];
+    phi     = sigmaPoint[i+4];
+    direction = getDirectionFromAngles(theta, phi);
+    inverseDepth = sigmaPoint[i+5];
 
     Eigen::Vector3d euclideanLandmark = origin + ((1.0/inverseDepth) * direction);
     
@@ -1016,10 +1100,8 @@ void UKF::addLandmarks(Eigen::VectorXd& sigmaPoint)
     outState.conservativeResize(sigmaPoint.rows() + (outLandmarkSize - inLandmarkSize) * numNewLandmarks);
     
     Eigen::Vector3d origin;
-    //origin << sigmaPoint[0], sigmaPoint[1], sigmaPoint[2];
     origin = cameraPosition(sigmaPoint);
     
-    //Eigen::Quaterniond camDirection(sigmaPoint[6], sigmaPoint[7], sigmaPoint[8], sigmaPoint[9]);
     Eigen::Quaterniond camDirection = cameraDirection(sigmaPoint);
         
     int in = deviceStateSize + lmIndex.size() * landmarkSize;
@@ -1027,11 +1109,14 @@ void UKF::addLandmarks(Eigen::VectorXd& sigmaPoint)
     for (int inIndex = in, outIndex = out, i =0; i < numNewLandmarks; inIndex += inLandmarkSize, outIndex += outLandmarkSize, i++)
     {
         Eigen::Vector3d landmarkDirection;
-        landmarkDirection << sigmaPoint[inIndex], sigmaPoint[inIndex + 1], simCamera.defaultFocalLength;
+        //landmarkDirection << sigmaPoint[inIndex], sigmaPoint[inIndex + 1], simCamera.defaultFocalLength;
+        landmarkDirection << sigmaPoint[inIndex], sigmaPoint[inIndex + 1], 1.0;
         
         Eigen::Matrix3d rotMat;
         rotMat = camDirection;
         landmarkDirection = rotMat * landmarkDirection;
+        
+        landmarkDirection.normalize();
         
         double theta, phi;
         getAnglesFromDirection(landmarkDirection, theta, phi);
@@ -1059,12 +1144,12 @@ void UKF::addNewLandmarks(Measurement m, Eigen::VectorXd& state, Eigen::MatrixXd
     
     Eigen::Matrix3d rotMat;
     rotMat = dir;
-    
+        
     std::vector<int> tags = m.getTags();
     for (int i=0; i<tags.size(); i++)
     {       
         std::vector<double> pixel = m.getObservation(tags[i]);
-        
+                        
         state.conservativeResize(state.rows() + 3);
         state[state.rows()-3] = pixel[0];
         state[state.rows()-2] = pixel[1];

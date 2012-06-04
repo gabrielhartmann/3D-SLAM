@@ -9,21 +9,31 @@ Device::Device(SimScene simScene)
     measurementNoiseMean << 0.0, 0.0, 0.0;
     measurementNoiseVariance << 0.0001, 0.0001, 0.0001;
     
+    accelerationNoiseMean << 0.0, 0.0, 0.0;
     //accelerationNoiseMean << 0.5, 0.5, 0.5;
-    accelerationNoiseMean << 0.5, 0.5, 0.5;
     accelerationNoiseVariance << 0.01, 0.01, 0.01;
     
+    angVelocityNoiseMean << 0.0, 0.0, 0.0;
     //angVelocityNoiseMean << 0.5, 0.5, 0.5;
-    angVelocityNoiseMean << 0.5, 0.5, 0.5;
     angVelocityNoiseVariance << 0.01, 0.01, 0.01;
     
     //Eigen::AngleAxisd aa(pi / 2.0, Eigen::Vector3d::UnitY());
     Eigen::AngleAxisd aa(0.0, Eigen::Vector3d::UnitY());
     initialImuDirection = aa;
-    defaultFocalLength = 1.0;
-    intrinsicCalibrationMatrix << defaultFocalLength, 0.0, 0.0,
-                                                     0.0, defaultFocalLength, 0.0,
+//    defaultFocalLength = 1.0;
+//    intrinsicCalibrationMatrix << defaultFocalLength, 0.0, 0.0,
+//                                                     0.0, defaultFocalLength, 0.0,
+//                                                     0.0, 0.0, 1.0;
+    defaultFocalLength = 500;
+    intrinsicCalibrationMatrix << defaultFocalLength, 0.0, 500.0,
+                                                     0.0, defaultFocalLength, 500.0,
                                                      0.0, 0.0, 1.0;
+    
+    inverseK = intrinsicCalibrationMatrix;
+    inverseK(0,0) = 1.0 / inverseK(0,0);
+    inverseK(1,1) = 1.0 / inverseK(1,1);
+    inverseK(0,2) = (-1.0 * inverseK(0,2)) / intrinsicCalibrationMatrix(0,0);
+    inverseK(1,2) = (-1.0 * inverseK(1,2)) / intrinsicCalibrationMatrix(1,1);
     
     imu2CameraTranslation << -20.0, 0.0, 0.0;
     //Eigen::AngleAxisd aa2(0.0, Eigen::Vector3d::UnitY());
@@ -33,7 +43,7 @@ Device::Device(SimScene simScene)
      
     //defaultTimeStep = 0.033;
     defaultTimeStep = 0.033;
-    sizeScale = 250;
+    sizeScale = 200;
     fov = pi / 3.0;
     
     this->simScene = simScene;
@@ -97,9 +107,11 @@ void Device::timeStep()
 
  Eigen::VectorXd Device::control()
  {
-     Eigen::Vector3d acceleration = getAcceleration();
+     //Eigen::Vector3d acceleration = getAcceleration();
+     Eigen::Vector3d acceleration = getAccelerationDev();
      addNoise(acceleration, accelerationNoiseMean, accelerationNoiseVariance);
-     Eigen::Vector3d angVelocity = getAngularVelocity();
+     //Eigen::Vector3d angVelocity = getAngularVelocity();
+     Eigen::Vector3d angVelocity = getAngularVelocityDev();
      addNoise(angVelocity, angVelocityNoiseMean, angVelocityNoiseVariance);
      
      Eigen::VectorXd control;
@@ -112,7 +124,7 @@ void Device::timeStep()
  }
  
 Measurement Device::measure()
-{    
+{        
     Measurement m;
     
     for (int i=0, j=0; i<simScene.landmarks.size(); i++, j+=2)
@@ -133,8 +145,19 @@ Measurement Device::measure()
             pixel[2] = 1.0;
             pixel = intrinsicCalibrationMatrix * pixel; //Projected landmark
 
-            addNoise(pixel, measurementNoiseMean, measurementNoiseVariance);
-            m.add(i, pixel.x(), pixel.y());
+            //print("Pixel:", pixel);
+            
+            Eigen::Vector3d p;
+            p << pixel[0], pixel[1], 1.0;       
+            p = inverseK * p;
+
+            //print("Pixel Direction Ray:", p);
+            
+//            addNoise(pixel, measurementNoiseMean, measurementNoiseVariance);
+//            m.add(i, pixel.x(), pixel.y());
+            
+            addNoise(p, measurementNoiseMean, measurementNoiseVariance);
+            m.add(i, p.x(), p.y());
         }
     }
     
@@ -178,9 +201,22 @@ Eigen::Vector3d Device::getVelocity()
 Eigen::Vector3d Device::getAcceleration()
 {
     Eigen::Vector3d acceleration;
-    acceleration << 0.0, -1.0 * std::sin(currTime) * sizeScale, -1.0 * std::cos(currTime) * sizeScale;
+    acceleration << 0.0, -1.0 * std::sin(currTime) * sizeScale, -1.0 * std::cos(currTime) * sizeScale;    
     //acceleration << -1.0 * std::sin(currTime * 1.0) * sizeScale / 2.0, -1.0 * std::sin(currTime) * sizeScale, -1.0 * std::cos(currTime) * sizeScale;
     return acceleration;
+}
+
+Eigen::Vector3d Device::getAccelerationDev()
+{
+    Eigen::Vector3d acceleration;
+    acceleration = getAcceleration();
+    
+    Eigen::Matrix3d rotMat;
+    rotMat = getImuDirection();
+    
+    Eigen::Vector3d accInImuCoordinates;
+    accInImuCoordinates = rotMat * acceleration;
+    return accInImuCoordinates;
 }
 
 Eigen::Quaterniond Device::getImuDirection()
@@ -217,8 +253,22 @@ Eigen::Vector3d Device::getAngularVelocity()
     angVelocity[0] = -1.0;
     angVelocity[1] = 0.0;
     angVelocity[2] = 0.0;
-    
+        
     return angVelocity;
+}
+
+Eigen::Vector3d Device::getAngularVelocityDev()
+{
+    Eigen::Matrix3d rotMat;
+    rotMat = getImuDirection();
+    
+    Eigen::Vector3d angVelocity;
+    angVelocity = getAngularVelocity();
+    
+    Eigen::Vector3d angVelocityInImuCoords;
+    angVelocityInImuCoords = rotMat * angVelocity;
+    
+    return angVelocityInImuCoords;
 }
 
 void Device::draw()
@@ -232,8 +282,25 @@ void Device::draw()
         glRotated(aa.angle() * 180.0 / pi, aa.axis().x(), aa.axis().y(), aa.axis().z());
 
         Color::setColor(0.8, 0.0, 0.0); //red
-
-        glutSolidCube(cubeWidth);
+        glutSolidCube(cubeWidth); // IMU
+        
+        // Axes
+        glBegin(GL_LINES);
+        glVertex3d(0.0, 0.0, 0.0);
+        glVertex3d(10.0, 0.0, 0.0);
+        glEnd();
+        
+        Color::setColor(0.0, 0.8, 0.0); //green
+        glBegin(GL_LINES);
+        glVertex3d(0.0, 0.0, 0.0);
+        glVertex3d(0.0, 10.0, 0.0);
+        glEnd();
+        
+        Color::setColor(0.0, 0.0, 0.8); //blue
+        glBegin(GL_LINES);
+        glVertex3d(0.0, 0.0, 0.0);
+        glVertex3d(0.0, 0.0, 10.0);
+        glEnd();
 
     glPopMatrix();
 

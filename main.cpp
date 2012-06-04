@@ -216,7 +216,6 @@ void displayReplay(void)
     Eigen::Quaterniond filterCamDir(state[10], state[11], state[12], state[13]);
     drawCamera(camPos, filterCamDir, focalLength, 0.0, 0.0, 0.8);
     drawImu(imuPos, filterImuDir, 4.0, 0.0, 0.0, 0.8);
-    
     Color::setColor(0.0, 0.0, 0.8); // Blue
     for (int lmIndex = 14; lmIndex < state.rows(); lmIndex += 3)
     {
@@ -224,6 +223,28 @@ void displayReplay(void)
         glTranslated(state[lmIndex], state[lmIndex+1], state[lmIndex+2]);
         glutSolidCube(4.0);
         glPopMatrix();
+    }
+    
+    //Draw filter history line
+    Eigen::Vector3d camPos2;
+    Color::setColor(0.0, 0.8, 0.8); // cyan
+    glLineWidth(4.0);
+    for (int i=0; i<stepIndex-1; i++)
+    {
+        state = filterStates[i];
+        camPos[0] = state[7];
+        camPos[1] = state[8];
+        camPos[2] = state[9];
+        
+        state = filterStates[i+1];
+        camPos2[0] = state[7];
+        camPos2[1] = state[8];
+        camPos2[2] = state[9];  
+        
+        glBegin(GL_LINES);
+        glVertex3d(camPos2.x(), camPos2.y(), camPos2.z());
+        glVertex3d(camPos.x(), camPos.y(), camPos.z());
+        glEnd();
     }
     
     // Draw device state which includes landmarks
@@ -238,7 +259,6 @@ void displayReplay(void)
     Eigen::Quaterniond deviceCamDir(state[10], state[11], state[12], state[13]);
     drawCamera(camPos, deviceCamDir, focalLength, 0.8, 0.0, 0.0);
     drawImu(imuPos, deviceImuDir, 4.0, 0.8, 0.0, 0.0);
-    
     
     for (int lmIndex = 14; lmIndex < state.rows(); lmIndex += 3)
     {
@@ -257,6 +277,27 @@ void displayReplay(void)
         glTranslated(lm.x(), lm.y(), lm.z());
         glutSolidCube(4.0);
         glPopMatrix();
+    }
+    
+     //Draw device history line
+    Color::setColor(0.8, 0.0, 0.8); // magenta
+    glLineWidth(4.0);
+    for (int i=0; i<stepIndex-1; i++)
+    {
+        state = deviceStates[i];
+        camPos[0] = state[7];
+        camPos[1] = state[8];
+        camPos[2] = state[9];
+        
+        state = deviceStates[i+1];
+        camPos2[0] = state[7];
+        camPos2[1] = state[8];
+        camPos2[2] = state[9];  
+        
+        glBegin(GL_LINES);
+        glVertex3d(camPos2.x(), camPos2.y(), camPos2.z());
+        glVertex3d(camPos.x(), camPos.y(), camPos.z());
+        glEnd();
     }
     
     glFlush ();
