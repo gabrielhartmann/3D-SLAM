@@ -146,6 +146,12 @@ Measurement Device::measure()
             pixel = intrinsicCalibrationMatrix * pixel; //Projected landmark
 
             //print("Pixel:", pixel);
+            // Truncate
+            int u = (int)pixel[0];
+            int v = (int)pixel[1];
+            pixel[0] = (double)u;
+            pixel[1] = (double)v;
+            //print("Truncated Pixel:", pixel);
             
             Eigen::Vector3d p;
             p << pixel[0], pixel[1], 1.0;       
