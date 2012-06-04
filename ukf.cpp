@@ -784,6 +784,7 @@ Measurement UKF::predictMeasurement(Eigen::VectorXd sigmaPoint)
             Eigen::Vector3d p;
             p << pixel[0], pixel[1], 1.0;       
             p = simCamera.inverseK * p;
+            //p.normalize();
             
             //m.add(iter->first, pixel[0], pixel[1]);
             m.add(iter->first, p[0], p[1]);
@@ -1149,10 +1150,16 @@ void UKF::addNewLandmarks(Measurement m, Eigen::VectorXd& state, Eigen::MatrixXd
     for (int i=0; i<tags.size(); i++)
     {       
         std::vector<double> pixel = m.getObservation(tags[i]);
+        
+        Eigen::Vector3d p;
+        p << pixel[0], pixel[1], 1.0;
+        //p.normalize();
                         
         state.conservativeResize(state.rows() + 3);
-        state[state.rows()-3] = pixel[0];
-        state[state.rows()-2] = pixel[1];
+//        state[state.rows()-3] = pixel[0];
+//        state[state.rows()-2] = pixel[1];
+        state[state.rows()-3] = p[0];
+        state[state.rows()-2] = p[1];
         state[state.rows()-1] = 1.0 / defaultDepth;
         
         Eigen::MatrixXd tmpCovariance;

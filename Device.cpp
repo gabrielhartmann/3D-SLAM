@@ -156,7 +156,8 @@ Measurement Device::measure()
             Eigen::Vector3d p;
             p << pixel[0], pixel[1], 1.0;       
             p = inverseK * p;
-
+            //p.normalize();
+            
             //print("Pixel Direction Ray:", p);
             
 //            addNoise(pixel, measurementNoiseMean, measurementNoiseVariance);
