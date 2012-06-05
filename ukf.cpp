@@ -287,7 +287,7 @@ void UKF::initializeStateAndCovariance()
     clear(state);
     //state.segment(0, 3) = simCamera.getImuPosition();
     state.segment(0, 3) = simCamera.getImuPosition();
-    //state[2] = state[2] - 8.0;  // A translation so both devices are visible at start
+    state[2] = state[2] - 8.0;  // A translation so both devices are visible at start
     state.segment(3, 3) = simCamera.getVelocity();
     Eigen::Quaterniond imuDir = simCamera.getImuDirection();
     state[6] = imuDir.w();
@@ -320,9 +320,9 @@ void UKF::initializeStateAndCovariance()
     covariance(7,7) = 0.0001;
     covariance(8,8) = 0.0001;
     covariance(9,9) = 0.0001;
-    covariance(10,10) = 1.0; // IMU 2 Camera Translation in IMU coordinates
-    covariance(11,11) = 1.0;
-    covariance(12,12) = 1.0;
+    covariance(10,10) = 0.0001; // IMU 2 Camera Translation in IMU coordinates
+    covariance(11,11) = 0.0001;
+    covariance(12,12) = 0.0001;
     covariance(13,13) = 0.0001; // IMU 2 Camera Direction in IMU coordinates
     covariance(14,14) = 0.0001;
     covariance(15,15) = 0.0001;
@@ -784,9 +784,7 @@ Measurement UKF::predictMeasurement(Eigen::VectorXd sigmaPoint)
             Eigen::Vector3d p;
             p << pixel[0], pixel[1], 1.0;       
             p = simCamera.inverseK * p;
-            //p.normalize();
             
-            //m.add(iter->first, pixel[0], pixel[1]);
             m.add(iter->first, p[0], p[1]);
         }
     }

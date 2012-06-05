@@ -51,8 +51,8 @@ private:
     double fov;
     const static double initialAccBias = 0.0;
     const static double initialGyroBias = 0.0;
-    const static double accBiasVariance = 0.001;
-    const static double gyroBiasVariance = 0.001;
+    const static double accBiasVariance = 0.0001;
+    const static double gyroBiasVariance = 0.0001;
     
     
     std::map<int, std::vector<int> > lmIndex;

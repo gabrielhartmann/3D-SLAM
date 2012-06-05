@@ -40,11 +40,13 @@ Device::Device(SimScene simScene)
     Eigen::AngleAxisd aa2(pi, Eigen::Vector3d::UnitY());
     //Eigen::AngleAxisd aa2(pi/2.0, Eigen::Vector3d::UnitY());
     imu2CameraDirection = aa2;
+    //printf("IMU - Camera direction: (%f, %f, %f, %f,)\n", imu2CameraDirection.w(), imu2CameraDirection.x(), imu2CameraDirection.y(), imu2CameraDirection.z());
      
     //defaultTimeStep = 0.033;
     defaultTimeStep = 0.033;
-    sizeScale = 200;
-    fov = pi / 3.0;
+    sizeScale = 150;
+    fov = pi / 2.0;
+    //fov = 2.0 * std::atan((intrinsicCalibrationMatrix(0,2) / 2.0) / defaultFocalLength);
     
     this->simScene = simScene;
     
@@ -145,23 +147,15 @@ Measurement Device::measure()
             pixel[2] = 1.0;
             pixel = intrinsicCalibrationMatrix * pixel; //Projected landmark
 
-            //print("Pixel:", pixel);
             // Truncate
             int u = (int)pixel[0];
             int v = (int)pixel[1];
             pixel[0] = (double)u;
             pixel[1] = (double)v;
-            //print("Truncated Pixel:", pixel);
             
             Eigen::Vector3d p;
             p << pixel[0], pixel[1], 1.0;       
             p = inverseK * p;
-            //p.normalize();
-            
-            //print("Pixel Direction Ray:", p);
-            
-//            addNoise(pixel, measurementNoiseMean, measurementNoiseVariance);
-//            m.add(i, pixel.x(), pixel.y());
             
             addNoise(p, measurementNoiseMean, measurementNoiseVariance);
             m.add(i, p.x(), p.y());
@@ -292,22 +286,22 @@ void Device::draw()
         glutSolidCube(cubeWidth); // IMU
         
         // Axes
-        glBegin(GL_LINES);
-        glVertex3d(0.0, 0.0, 0.0);
-        glVertex3d(10.0, 0.0, 0.0);
-        glEnd();
-        
-        Color::setColor(0.0, 0.8, 0.0); //green
-        glBegin(GL_LINES);
-        glVertex3d(0.0, 0.0, 0.0);
-        glVertex3d(0.0, 10.0, 0.0);
-        glEnd();
-        
-        Color::setColor(0.0, 0.0, 0.8); //blue
-        glBegin(GL_LINES);
-        glVertex3d(0.0, 0.0, 0.0);
-        glVertex3d(0.0, 0.0, 10.0);
-        glEnd();
+//        glBegin(GL_LINES);
+//        glVertex3d(0.0, 0.0, 0.0);
+//        glVertex3d(10.0, 0.0, 0.0);
+//        glEnd();
+//        
+//        Color::setColor(0.0, 0.8, 0.0); //green
+//        glBegin(GL_LINES);
+//        glVertex3d(0.0, 0.0, 0.0);
+//        glVertex3d(0.0, 10.0, 0.0);
+//        glEnd();
+//        
+//        Color::setColor(0.0, 0.0, 0.8); //blue
+//        glBegin(GL_LINES);
+//        glVertex3d(0.0, 0.0, 0.0);
+//        glVertex3d(0.0, 0.0, 10.0);
+//        glEnd();
 
     glPopMatrix();
 

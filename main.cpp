@@ -24,7 +24,9 @@
 #include "ukf.hpp"
 #include "Utilities.h"
 
-string fileName;
+string fileNameRecording;
+string fileNameError;
+string fileNameRelativeError;
 
 std::vector<Eigen::VectorXd, Eigen::aligned_allocator<Eigen::VectorXd> > deviceStates;
 std::vector<Eigen::VectorXd, Eigen::aligned_allocator<Eigen::VectorXd> > filterStates;
@@ -347,12 +349,71 @@ string vector2string(Eigen::VectorXd vec)
     return s.str();
 }
 
-void write(Eigen::VectorXd state)
+void write(Eigen::VectorXd state, string fileName)
 {
     std::ofstream outFile;
     outFile.open(fileName.c_str(), std::ios_base::app);
     outFile << vector2string(state);
     outFile.close();
+}
+
+double getError(Eigen::VectorXd v1, Eigen::VectorXd v2)
+{
+    Eigen::VectorXd error;
+       
+    if(v1.rows() > v2.rows())
+    {
+        v1.conservativeResize(v2.rows());
+    }else if (v2.rows() > v1.rows())
+    {
+        v2.conservativeResize(v1.rows());
+    }
+    
+    double e = 0;
+    error.resize(v1.rows());
+    error = v1 - v2;
+    for (int i=0; i<error.rows(); i++)
+    {
+        e += std::sqrt(error[i] * error[i]);
+    }
+
+    return e;
+}
+
+double getRelativeError(Eigen::VectorXd v1, Eigen::VectorXd v2)
+{
+    // Filter
+    double filterDistance = 0;
+    Eigen::Vector3d camPos;
+    camPos << v1[7], v1[8], v1[9];
+    for (int i=14; i<v1.rows(); i+=3)
+    {
+        Eigen::Vector3d diff;
+        Eigen::Vector3d lm;
+        lm << v1[i], v1[i+1], v1[i+2];
+        diff = camPos - lm;
+        for (int j=0; j<3; j++)
+        {
+            filterDistance += std::sqrt(diff[j] * diff[j]);
+        }
+    }
+    
+    // Device
+    double deviceDistance = 0;
+    camPos << v2[7], v2[8], v2[9];
+    for (int i=14; i<v1.rows(); i+=3)
+    {
+        Eigen::Vector3d diff;
+        Eigen::Vector3d lm;
+        lm << v2[i], v2[i+1], v2[i+2];
+        diff = camPos - lm;
+        for (int j=0; j<3; j++)
+        {
+            deviceDistance += std::sqrt(diff[j] * diff[j]);
+        }
+    }
+    
+    return std::abs(filterDistance - deviceDistance);
 }
 
 void idle()
@@ -361,11 +422,20 @@ void idle()
     {
         simCamera.timeStep();
         filter.step(simCamera.defaultTimeStep, simCamera.control(), simCamera.measure());
-        write(simCamera.getState());
-        write(filter.getState());
+        write(simCamera.getState(), fileNameRecording);
+        write(filter.getState(), fileNameRecording);
+        double e = getError(simCamera.getState(), filter.getState());
+        double re = getRelativeError(simCamera.getState(), filter.getState());
+        Eigen::VectorXd error;
+        error.resize(1);
+        error[0] = e;
+        write(error, fileNameError);
+        error[0] = re;
+        write(error, fileNameRelativeError);
         glutPostRedisplay();
     }
 }
+
 Eigen::VectorXd line2Vector(string line)
 {
     istringstream iss(line);
@@ -410,9 +480,20 @@ int main(int argc, char** argv)
         time_t rawtime;
         time(&rawtime);
         string time = ctime(&rawtime);
-        fileName = "Recording " + time;
-        write(simCamera.getState());
-        write(filter.getState());
+        fileNameRecording = time + "Recording ";
+        fileNameError = time + "Error ";
+        fileNameRelativeError = time + "Relative Error ";
+        write(simCamera.getState(), fileNameRecording);
+        write(filter.getState(), fileNameRecording);
+        double e = getError(simCamera.getState(), filter.getState());
+        double re = getRelativeError(simCamera.getState(), filter.getState());
+        Eigen::VectorXd error;
+        error.resize(1);
+        error[0] = e;
+        write(error, fileNameError);
+        error[0] = re;
+        write(error, fileNameRelativeError);
+        
 
         glutInit(&argc, argv);		
         glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
