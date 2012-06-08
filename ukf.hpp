@@ -83,11 +83,15 @@ private:
     void removeZero(Eigen::MatrixXd &mat, double val);
     
     //const static double inverseDepthVariance = 0.0000000001;
-    const static double inverseDepthVariance = 0.0000001;
+    //const static double inverseDepthVariance = 0.000000000000000000000001; // Room loop closing!
+    //const static double inverseDepthVariance = 0.00000000000000000000000001; // 2x3 loop closing
+    const static double inverseDepthVariance = 1e-310;
     const static double focalLengthVariance = 0.0001;
     const static double accelerationVariance = 0.0625;
     const static double measurementVariance = 0.025;
-    const static int initializeSteps = 5;
+    const static int initializeSteps = 2;
+    const static int stepsBetweenNewFeatures = 5;
+    const static int numNewFeatures = 1;
     
     int filterStepCount;
         
@@ -134,6 +138,9 @@ private:
     void addLandmarks(int i);
     
     void addNewLandmarks(Measurement m, Eigen::VectorXd &state, Eigen::MatrixXd &covariance);
+    
+    void removeNegativeLandmarks();
+    void removeLandmark(int i);
 };
 
 #endif	/* UKF_HPP */

@@ -424,14 +424,6 @@ void idle()
         filter.step(simCamera.defaultTimeStep, simCamera.control(), simCamera.measure());
         write(simCamera.getState(), fileNameRecording);
         write(filter.getState(), fileNameRecording);
-        double e = getError(simCamera.getState(), filter.getState());
-        double re = getRelativeError(simCamera.getState(), filter.getState());
-        Eigen::VectorXd error;
-        error.resize(1);
-        error[0] = e;
-        write(error, fileNameError);
-        error[0] = re;
-        write(error, fileNameRelativeError);
         glutPostRedisplay();
     }
 }
@@ -481,19 +473,8 @@ int main(int argc, char** argv)
         time(&rawtime);
         string time = ctime(&rawtime);
         fileNameRecording = time + "Recording ";
-        fileNameError = time + "Error ";
-        fileNameRelativeError = time + "Relative Error ";
         write(simCamera.getState(), fileNameRecording);
         write(filter.getState(), fileNameRecording);
-        double e = getError(simCamera.getState(), filter.getState());
-        double re = getRelativeError(simCamera.getState(), filter.getState());
-        Eigen::VectorXd error;
-        error.resize(1);
-        error[0] = e;
-        write(error, fileNameError);
-        error[0] = re;
-        write(error, fileNameRelativeError);
-        
 
         glutInit(&argc, argv);		
         glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);

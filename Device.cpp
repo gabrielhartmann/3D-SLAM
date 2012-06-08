@@ -7,7 +7,7 @@ Device::Device(){}
 Device::Device(SimScene simScene)
 {    
     measurementNoiseMean << 0.0, 0.0, 0.0;
-    measurementNoiseVariance << 0.0001, 0.0001, 0.0001;
+    measurementNoiseVariance << 0.01, 0.01, 0.0001;
     
     accelerationNoiseMean << 0.0, 0.0, 0.0;
     //accelerationNoiseMean << 0.5, 0.5, 0.5;

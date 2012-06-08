@@ -343,7 +343,7 @@ void UKF::initializeStateAndCovariance()
     stateCovariance.resize(covariance.rows(), covariance.cols());
     stateCovariance = covariance;
     
-    removeZero(stateCovariance, 0.001);
+    //removeZero(stateCovariance, 0.001);
     
 //    print("State:", stateVector);
 //    printf("\n");
@@ -1134,51 +1134,122 @@ void UKF::addLandmarks(Eigen::VectorXd& sigmaPoint)
 
 void UKF::addNewLandmarks(Measurement m, Eigen::VectorXd& state, Eigen::MatrixXd& covariance)
 {
-    int initialNumLandmarks = (state.rows() - deviceStateSize) / landmarkSize;
+    if (filterStepCount % stepsBetweenNewFeatures == 0)
+    {
+        removeNegativeLandmarks();
+        int initialNumLandmarks = (state.rows() - deviceStateSize) / landmarkSize;
+
+        Eigen::Vector3d position;
+        position << state[0], state[1], state[2];
+
+        Eigen::Quaterniond dir(state[6], state[7], state[8], state[9]);
+
+        Eigen::Matrix3d rotMat;
+        rotMat = dir;
+
+        std::vector<int> tags = m.getTags();
+        //for (int i=0; i<tags.size(); i++)
+        for (int i=0; i<numNewFeatures; i++)
+        {       
+            std::vector<double> pixel = m.getObservation(tags[i]);
+
+            Eigen::Vector3d p;
+            p << pixel[0], pixel[1], 1.0;
+            //p.normalize();
+
+            state.conservativeResize(state.rows() + 3);
+    //        state[state.rows()-3] = pixel[0];
+    //        state[state.rows()-2] = pixel[1];
+            state[state.rows()-3] = p[0];
+            state[state.rows()-2] = p[1];
+            state[state.rows()-1] = 1.0 / defaultDepth;
+
+            Eigen::MatrixXd tmpCovariance;
+            tmpCovariance.resize(covariance.rows() + 3, covariance.rows() + 3);
+            clear(tmpCovariance);
+            tmpCovariance.block(0,0, covariance.rows(), covariance.cols()) = covariance;
+            covariance.resize(covariance.rows() + 3, covariance.rows() + 3);
+            covariance = tmpCovariance;
+            covariance(covariance.rows()-3, covariance.rows()-3) = simCamera.measurementNoiseVariance.x();
+            covariance(covariance.rows()-2, covariance.rows()-2) = simCamera.measurementNoiseVariance.y();
+            covariance(covariance.rows()-1, covariance.rows()-1) = inverseDepthVariance;
+        }
+
+        unscentedTransform(state, covariance, &UKF::addLandmarks);
+
+        //for (int i=0; i<tags.size(); i++)
+        for (int i=0; i<numNewFeatures; i++)
+        {
+            std::vector<int> indexAndInit;
+            indexAndInit.push_back(getLandmarkIndex(initialNumLandmarks + i));
+            int initSteps = initializeSteps;
+            indexAndInit.push_back(initSteps);
+            lmIndex[tags[i]] = indexAndInit;
+        }
+    }
+}
+
+void UKF::removeNegativeLandmarks()
+{
+  std::vector<int> tagsToRemove;
+  for (std::map<int, std::vector<int> >::iterator iter = lmIndex.begin(); iter != lmIndex.end(); iter++)  
+  {
+      int index = iter->second[0];
+      double inverseDepth = stateVector[index + 5];
+      if (inverseDepth <= 0.0)
+      {
+          tagsToRemove.push_back(iter->first);
+          removeLandmark(index);
+          // Update indices in the map
+          for(std::map<int, std::vector<int> >::iterator updateIter = lmIndex.begin(); updateIter != lmIndex.end(); updateIter++)
+          {
+              if (updateIter->second[0] > index)
+              {
+                  updateIter->second[0] = updateIter->second[0] - landmarkSize;
+              }
+          }
+      }
+  }
+  
+  for (int i=0; i<tagsToRemove.size(); i++)
+  {
+      lmIndex.erase(tagsToRemove[i]);
+  }
+}
+
+void UKF::removeLandmark(int i)
+{  
+    // STATE
+    Eigen::VectorXd state;
+    state.resize(stateVector.rows()-landmarkSize);
+    // Copy state before landmark
+    state.segment(0,i) = stateVector.segment(0,i);
+    // Copy state after landmark
+    int numRowsAfterLandmark = stateVector.rows() - (i+landmarkSize);
+    state.segment(i, numRowsAfterLandmark) = stateVector.segment(i+landmarkSize, numRowsAfterLandmark);
+    // Replace stateVector
+    stateVector = state;
     
-    Eigen::Vector3d position;
-    position << state[0], state[1], state[2];
-    
-    Eigen::Quaterniond dir(state[6], state[7], state[8], state[9]);
-    
-    Eigen::Matrix3d rotMat;
-    rotMat = dir;
-        
-    std::vector<int> tags = m.getTags();
-    for (int i=0; i<tags.size(); i++)
-    {       
-        std::vector<double> pixel = m.getObservation(tags[i]);
-        
-        Eigen::Vector3d p;
-        p << pixel[0], pixel[1], 1.0;
-        //p.normalize();
-                        
-        state.conservativeResize(state.rows() + 3);
-//        state[state.rows()-3] = pixel[0];
-//        state[state.rows()-2] = pixel[1];
-        state[state.rows()-3] = p[0];
-        state[state.rows()-2] = p[1];
-        state[state.rows()-1] = 1.0 / defaultDepth;
-        
-        Eigen::MatrixXd tmpCovariance;
-        tmpCovariance.resize(covariance.rows() + 3, covariance.rows() + 3);
-        clear(tmpCovariance);
-        tmpCovariance.block(0,0, covariance.rows(), covariance.cols()) = covariance;
-        covariance.resize(covariance.rows() + 3, covariance.rows() + 3);
-        covariance = tmpCovariance;
-        covariance(covariance.rows()-3, covariance.rows()-3) = simCamera.measurementNoiseVariance.x();
-        covariance(covariance.rows()-2, covariance.rows()-2) = simCamera.measurementNoiseVariance.y();
-        covariance(covariance.rows()-1, covariance.rows()-1) = inverseDepthVariance;
+    // COVARIANCE
+    Eigen::MatrixXd covarianceRows;
+    covarianceRows.resize(stateCovariance.rows()-landmarkSize, stateCovariance.cols());
+    // COPY ROWS
+    covarianceRows.block(0,0, i, covarianceRows.cols()) = stateCovariance.block(0,0, i, stateCovariance.cols());
+    int numRowsAfterLM = stateCovariance.rows() - (i + landmarkSize);
+    if (numRowsAfterLM > 0)
+    {        
+        covarianceRows.block(i, 0, numRowsAfterLM, stateCovariance.cols()) = stateCovariance.block(i + landmarkSize, 0, numRowsAfterLM, stateCovariance.cols());
     }
     
-     unscentedTransform(state, covariance, &UKF::addLandmarks);
-     
-     for (int i=0; i<tags.size(); i++)
-     {
-         std::vector<int> indexAndInit;
-         indexAndInit.push_back(getLandmarkIndex(initialNumLandmarks + i));
-         int initSteps = initializeSteps;
-         indexAndInit.push_back(initSteps);
-         lmIndex[tags[i]] = indexAndInit;
-     }
+    //  COPY COLS
+    Eigen::MatrixXd covariance;
+    covariance.resize(covarianceRows.rows(), covarianceRows.cols() - landmarkSize);
+    covariance.block(0,0, covarianceRows.rows(), i) = covarianceRows.block(0,0, covarianceRows.rows(), i);
+    int numColsAfterLM = stateCovariance.cols() - (i +landmarkSize);
+    if (numColsAfterLM > 0)
+    {
+        covariance.block(0, i, covarianceRows.rows(), numColsAfterLM) = covarianceRows.block(0, i+landmarkSize, covarianceRows.rows(), numColsAfterLM);
+    }
+        
+    stateCovariance = covariance;
 }
