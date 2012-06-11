@@ -55,7 +55,7 @@ private:
     const static double gyroBiasVariance = 0.0001;
     
     
-    std::map<int, std::vector<int> > lmIndex;
+    std::map<int, std::vector<int> > lmIndex; // key = tag, value = index in state, number of initialization rounds left
     
     Eigen::VectorXd stateVector;
     Eigen::MatrixXd stateCovariance;
@@ -89,7 +89,7 @@ private:
     const static double focalLengthVariance = 0.0001;
     const static double accelerationVariance = 0.0625;
     const static double measurementVariance = 0.025;
-    const static int initializeSteps = 2;
+    const static int initializeSteps = 5;
     const static int stepsBetweenNewFeatures = 5;
     const static int numNewFeatures = 1;
     
@@ -122,6 +122,7 @@ private:
     Eigen::MatrixXd K;
     
     Eigen::Vector3d getEuclideanLandmark(int index);
+    Eigen::Vector3d getEuclideanLandmark(Eigen::VectorXd idParam);
     Eigen::Vector3d getEuclideanLandmark(int index, Eigen::VectorXd sigmaPoint);
     void getAnglesFromDirection(Eigen::Vector3d direction, double &theta, double &phi);
     Eigen::Vector3d getDirectionFromAngles(double theta, double phi);

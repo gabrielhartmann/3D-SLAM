@@ -21,6 +21,7 @@ public:
     std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> > landmarks;    
     void draw();
     void drawAxes();
+    double roomRadius;
 private:
     
     static const int axesLength = 150;

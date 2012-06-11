@@ -6,17 +6,36 @@ SimScene::SimScene()
     
     int width, height, depth;
     double space = 100;
-    double roomRadius = 300;
+    roomRadius = 500;
 
     Eigen::Vector3d origin;
     Eigen::Vector3d offset;
     
     // CUBE
+        width = 2;
+    height = 2;
+    depth = 2;
+    origin << -space * (width - 1) / 2.0, -space * (height - 1) / 2.0, -space * (depth - 1) / 2.0;
+    offset << 0.0, 0.0, 0.0;
+    origin = origin + offset;
+    for (int x=0; x<width; x++)
+    {
+        for (int y=0; y<height; y++)
+        {
+            for (int z=0; z<depth; z++)
+            {
+                landmarks.push_back(Eigen::Vector3d(origin.x() + x * space, origin.y() + y * space, origin.z() + z * space));
+            }
+        }
+    }
+
+//    
+//    
 //    width = 2;
 //    height = 2;
 //    depth = 2;
 //    origin << -space * (width - 1) / 2.0, -space * (height - 1) / 2.0, -space * (depth - 1) / 2.0;
-//    offset << 0.0, 0.0, 0.0;
+//    offset << 0.0, 0.0, 500.0;
 //    origin = origin + offset;
 //    for (int x=0; x<width; x++)
 //    {
@@ -29,77 +48,36 @@ SimScene::SimScene()
 //        }
 //    }
     
-    // 1st Wall
-    width = 2;
-    height = 2;
-    depth = 1;
-    origin << -space * (width - 1) / 2.0, -space * (height - 1) / 2.0, -space * (depth - 1) / 2.0;
-    offset << 0.0, 0.0, -roomRadius;
-    origin = origin + offset;
-    for (int x=0; x<width; x++)
-    {
-        for (int y=0; y<height; y++)
-        {
-            for (int z=0; z<depth; z++)
-            {
-                landmarks.push_back(Eigen::Vector3d(origin.x() + x * space, origin.y() + y * space, origin.z() + z * space));
-            }
-        }
-    }
-    
-    // Floor
-    width = 2;
-    height = 1;
-    depth = 2;
-    origin << -space * (width - 1) / 2.0, -space * (height - 1) / 2.0, -space * (depth - 1) / 2.0;
-    offset << 0.0, -roomRadius, 0.0;
-    origin = origin + offset;
-    for (int x=0; x<width; x++)
-    {
-        for (int y=0; y<height; y++)
-        {
-            for (int z=0; z<depth; z++)
-            {
-                landmarks.push_back(Eigen::Vector3d(origin.x() + x * space, origin.y() + y * space, origin.z() + z * space));
-            }
-        }
-    }
-    
-    // 2nd Wall
-    width = 2;
-    height = 2;
-    depth = 1;
-    origin << -space * (width - 1) / 2.0, -space * (height - 1) / 2.0, -space * (depth - 1) / 2.0;
-    offset << 0.0, 0.0, roomRadius;
-    origin = origin + offset;
-    for (int x=0; x<width; x++)
-    {
-        for (int y=0; y<height; y++)
-        {
-            for (int z=0; z<depth; z++)
-            {
-                landmarks.push_back(Eigen::Vector3d(origin.x() + x * space, origin.y() + y * space, origin.z() + z * space));
-            }
-        }
-    }
-    
-    // Ceiling
-    width = 2;
-    height = 1;
-    depth = 2;
-    origin << -space * (width - 1) / 2.0, -space * (height - 1) / 2.0, -space * (depth - 1) / 2.0;
-    offset << 0.0, roomRadius, 0.0;
-    origin = origin + offset;
-    for (int x=0; x<width; x++)
-    {
-        for (int y=0; y<height; y++)
-        {
-            for (int z=0; z<depth; z++)
-            {
-                landmarks.push_back(Eigen::Vector3d(origin.x() + x * space, origin.y() + y * space, origin.z() + z * space));
-            }
-        }
-    }
+//    space = 70;
+//    width = 2;
+//    height = 2;
+//    depth = 2;
+//    origin << -space * (width - 1) / 2.0, -space * (height - 1) / 2.0, -space * (depth - 1) / 2.0;
+//    offset << 0.0, 200.0, 200.0;
+//    origin = origin + offset;
+//    for (int x=0; x<width; x++)
+//    {
+//        for (int y=0; y<height; y++)
+//        {
+//            for (int z=0; z<depth; z++)
+//            {
+//                landmarks.push_back(Eigen::Vector3d(origin.x() + x * space, origin.y() + y * space, origin.z() + z * space));
+//            }
+//        }
+//    }
+//    
+//    double wallHeight = 4;
+//    for (int i=0; i<wallHeight; i++)
+//    {
+//        landmarks.push_back(Eigen::Vector3d(i * space, 0.0, -roomRadius));
+//        landmarks.push_back(Eigen::Vector3d(i * space, -roomRadius, -roomRadius));
+//        landmarks.push_back(Eigen::Vector3d(i * space, -roomRadius, 0.0));
+//        landmarks.push_back(Eigen::Vector3d(i * space, -roomRadius, roomRadius));
+//        landmarks.push_back(Eigen::Vector3d(i * space, 0.0, roomRadius));
+//        landmarks.push_back(Eigen::Vector3d(i * space, roomRadius, roomRadius));
+//        landmarks.push_back(Eigen::Vector3d(i * space, roomRadius, 0.0));
+//        landmarks.push_back(Eigen::Vector3d(i * space, roomRadius, -roomRadius));
+//    }
 }
 
 void SimScene::draw()

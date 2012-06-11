@@ -25,8 +25,6 @@
 #include "Utilities.h"
 
 string fileNameRecording;
-string fileNameError;
-string fileNameRelativeError;
 
 std::vector<Eigen::VectorXd, Eigen::aligned_allocator<Eigen::VectorXd> > deviceStates;
 std::vector<Eigen::VectorXd, Eigen::aligned_allocator<Eigen::VectorXd> > filterStates;
@@ -160,6 +158,7 @@ void handleKeyboardReplay(unsigned char key, int x, int y)
         default:
             trackball.tbKeyboard(key);
     }
+    printf("Step %d\n", stepIndex);
     glutPostRedisplay();
 }
 
@@ -187,6 +186,8 @@ void display(void)
 
 void displayReplay(void)
 {
+    static int historyLength = 500;
+    
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     gluPerspective(33,1,2, 1000 + eyeZ);
@@ -219,11 +220,11 @@ void displayReplay(void)
     drawCamera(camPos, filterCamDir, focalLength, 0.0, 0.0, 0.8);
     drawImu(imuPos, filterImuDir, 4.0, 0.0, 0.0, 0.8);
     Color::setColor(0.0, 0.0, 0.8); // Blue
-    for (int lmIndex = 14; lmIndex < state.rows(); lmIndex += 3)
+    for (int lmIndex = 14; lmIndex < state.rows(); lmIndex += 4)
     {
         glPushMatrix();
-        glTranslated(state[lmIndex], state[lmIndex+1], state[lmIndex+2]);
-        glutSolidCube(4.0);
+        glTranslated(state[lmIndex+1], state[lmIndex+2], state[lmIndex+3]);
+        glutSolidCube(cubeWidth);
         glPopMatrix();
     }
     
@@ -231,7 +232,15 @@ void displayReplay(void)
     Eigen::Vector3d camPos2;
     Color::setColor(0.0, 0.8, 0.8); // cyan
     glLineWidth(4.0);
-    for (int i=0; i<stepIndex-1; i++)
+    int i;
+    if (stepIndex < historyLength)
+    {
+        i=0;
+    }
+    else{
+        i = stepIndex - historyLength;
+    }
+    for (; i<stepIndex-1; i++)
     {
         state = filterStates[i];
         camPos[0] = state[7];
@@ -277,14 +286,21 @@ void displayReplay(void)
         }
         glPushMatrix();
         glTranslated(lm.x(), lm.y(), lm.z());
-        glutSolidCube(4.0);
+        glutSolidCube(cubeWidth);
         glPopMatrix();
     }
     
      //Draw device history line
     Color::setColor(0.8, 0.0, 0.8); // magenta
     glLineWidth(4.0);
-    for (int i=0; i<stepIndex-1; i++)
+    if (stepIndex < historyLength)
+    {
+        i=0;
+    }
+    else{
+        i = stepIndex - historyLength;
+    }
+    for (; i<stepIndex-1; i++)
     {
         state = deviceStates[i];
         camPos[0] = state[7];
@@ -357,64 +373,83 @@ void write(Eigen::VectorXd state, string fileName)
     outFile.close();
 }
 
-double getError(Eigen::VectorXd v1, Eigen::VectorXd v2)
+double getError(Eigen::VectorXd filter, Eigen::VectorXd world)
 {
-    Eigen::VectorXd error;
-       
-    if(v1.rows() > v2.rows())
+    Eigen::Vector3d f_imuPos;
+    f_imuPos[0] = filter[0];
+    f_imuPos[1] = filter[1];
+    f_imuPos[2] = filter[2];
+    Eigen::Vector3d f_camPos;
+    f_camPos[0] = filter[7];
+    f_camPos[1] = filter[8];
+    f_camPos[2] = filter[9];
+    
+    //printf("Filter imu = (%f, %f, %f)\n Filter cam = (%f, %f, %f)\n", f_imuPos[0], f_imuPos[1], f_imuPos[2], f_camPos[0], f_camPos[1], f_camPos[2]);
+    
+    Eigen::Vector3d w_imuPos;
+    w_imuPos[0] = world[0];
+    w_imuPos[1] = world[1];
+    w_imuPos[2] = filter[2];
+    Eigen::Vector3d w_camPos;
+    w_camPos[0] = world[7];
+    w_camPos[1] = world[8];
+    w_camPos[2] = world[9];
+    
+    //printf("World imu = (%f, %f, %f)\n World cam = (%f, %f, %f)\n", w_imuPos[0], w_imuPos[1], w_imuPos[2], w_camPos[0], w_camPos[1], w_camPos[2]);
+    
+    Eigen::Vector3d imuDiff;
+    imuDiff = f_imuPos - w_imuPos;
+    double imuError = imuDiff.adjoint() * imuDiff;
+    imuError = sqrt(imuError);
+    
+    Eigen::Vector3d camDiff;
+    camDiff = f_camPos - w_camPos;
+    double camError = camDiff.adjoint() * camDiff;
+    camError =sqrt(camError);
+    double lmError = 0;
+    
+    // Construct world map of landmarks
+    std::map<int, std::vector<double> >lms;
+    std::vector<double> lm;
+    int numLandmarksInWorld = (world.rows() - 14) / 3;
+    for (int i=0; i<numLandmarksInWorld; i++)
     {
-        v1.conservativeResize(v2.rows());
-    }else if (v2.rows() > v1.rows())
-    {
-        v2.conservativeResize(v1.rows());
+        int index = 14 + i*3;
+        lm.clear();
+        lm.push_back(world[index]);
+        lm.push_back(world[index + 1]);
+        lm.push_back(world[index + 2]);
+        lms[i] = lm;
     }
     
-    double e = 0;
-    error.resize(v1.rows());
-    error = v1 - v2;
-    for (int i=0; i<error.rows(); i++)
+    
+    int numLandmarksInFilter = (filter.rows() - 14) / 4;
+    for (int i=0; i<numLandmarksInFilter; i++)
     {
-        e += std::sqrt(error[i] * error[i]);
+        int index = 14 + i*4;
+        
+        int tag = (int)filter[index];
+        
+        Eigen::Vector3d f_LM;
+        f_LM[0] = filter[index+1];
+        f_LM[1] = filter[index+2];
+        f_LM[2] = filter[index+3];
+        
+        Eigen::Vector3d w_LM;
+        w_LM[0] = lms[tag][0];
+        w_LM[1] = lms[tag][1];
+        w_LM[2] = lms[tag][2];
+        
+        Eigen::Vector3d lmDiff;
+        lmDiff = f_LM - w_LM;
+        double e = lmDiff.adjoint() * lmDiff;
+        lmError += sqrt(e);
     }
-
-    return e;
+    
+    return imuError + camError + lmError;
 }
 
-double getRelativeError(Eigen::VectorXd v1, Eigen::VectorXd v2)
-{
-    // Filter
-    double filterDistance = 0;
-    Eigen::Vector3d camPos;
-    camPos << v1[7], v1[8], v1[9];
-    for (int i=14; i<v1.rows(); i+=3)
-    {
-        Eigen::Vector3d diff;
-        Eigen::Vector3d lm;
-        lm << v1[i], v1[i+1], v1[i+2];
-        diff = camPos - lm;
-        for (int j=0; j<3; j++)
-        {
-            filterDistance += std::sqrt(diff[j] * diff[j]);
-        }
-    }
-    
-    // Device
-    double deviceDistance = 0;
-    camPos << v2[7], v2[8], v2[9];
-    for (int i=14; i<v1.rows(); i+=3)
-    {
-        Eigen::Vector3d diff;
-        Eigen::Vector3d lm;
-        lm << v2[i], v2[i+1], v2[i+2];
-        diff = camPos - lm;
-        for (int j=0; j<3; j++)
-        {
-            deviceDistance += std::sqrt(diff[j] * diff[j]);
-        }
-    }
-    
-    return std::abs(filterDistance - deviceDistance);
-}
+
 
 void idle()
 {
@@ -425,6 +460,19 @@ void idle()
         write(simCamera.getState(), fileNameRecording);
         write(filter.getState(), fileNameRecording);
         glutPostRedisplay();
+    }
+}
+
+void computeError(string fName)
+{
+    string fileNameError = fName + " Error";
+    Eigen::VectorXd e;
+    e.resize(1);
+    for (int i=0; i<deviceStates.size(); i++)
+    {
+        double error = getError(filterStates[i], deviceStates[i]);
+        e[0] = error;
+        write(e, fileNameError);
     }
 }
 
@@ -462,6 +510,11 @@ void readReplay(string fName)
             filterStates.push_back(line2Vector(line));
         }
     }
+    
+    deviceStates.pop_back();
+    filterStates.pop_back();
+    
+    //computeError(fName);
 }
 
 // create a double buffered colour window

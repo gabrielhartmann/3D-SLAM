@@ -32,7 +32,7 @@ Eigen::VectorXd UKF::getState()
     Eigen::VectorXd state;
     int numLandmarks = (stateVector.rows() - deviceStateSize) / landmarkSize;
     
-    state.resize(14 + 3*numLandmarks); // imuPos(3) imuDir(4) camPos(3) camDir(4)
+    state.resize(14 + 4*numLandmarks); // tag(1) imuPos(3) imuDir(4) camPos(3) camDir(4)
     state.segment(0, 3) = imuPosition();
     Eigen::Quaterniond imuDir;
     imuDir = imuDirection();
@@ -48,10 +48,24 @@ Eigen::VectorXd UKF::getState()
     state[12] = camDir.y();
     state[13] = camDir.z();
     
-    
-    for (int i=0; i<numLandmarks; i++)
+    int i=0;
+    for(std::map<int, std::vector<int> >::iterator iter = lmIndex.begin(); iter != lmIndex.end(); iter++)
     {
-        state.segment(14 + i * 3, 3) = getEuclideanLandmark(i);
+        int tag = iter->first;
+        int index = iter->second[0];
+        Eigen::VectorXd idParam;
+        idParam.resize(landmarkSize);
+        idParam[0] = stateVector[index];
+        idParam[1] = stateVector[index+1];
+        idParam[2] = stateVector[index+2];
+        idParam[3] = stateVector[index+3];
+        idParam[4] = stateVector[index+4];
+        idParam[5] = stateVector[index+5];
+        
+        Eigen::Vector3d euclidLM = getEuclideanLandmark(idParam);
+        state[14+ i*4] = (double) tag;
+        state.segment(14+ i*4+1, 3) = euclidLM;
+        i++;
     }
     
     return state;
@@ -156,11 +170,18 @@ void UKF::draw()
     drawCamera();
     
     // Draw landmarks
-    Color::setColor(0.0, 0.0, 0.8); // blue
-    for (int i=0; i < landmarks().size(); i++)
+    std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> > lms = landmarks();
+    for (int i=0; i < lms.size(); i++)
     {
+        if (visible(cameraPosition(), cameraDirection(), PI, lms[i]))
+        {
+            Color::setColor(0.0, 0.8, 0.8);
+        }else{
+            Color::setColor(0.0, 0.0, 0.8); // blue
+        }
+        
         glPushMatrix();
-        glTranslated(landmarks()[i].x(), landmarks()[i].y(), landmarks()[i].z());
+        glTranslated(lms[i].x(), lms[i].y(), lms[i].z());
         glutSolidCube(cubeWidth);
         glPopMatrix();
     }
@@ -197,7 +218,7 @@ void UKF::drawImu()
     glRotated(aa.angle() * 180.0 / simCamera.pi, aa.axis().x(), aa.axis().y(), aa.axis().z());
     
     Color::setColor(0.0, 0.0, 0.9); //blue
-    glutSolidCube(cubeWidth);
+    glutSolidCube(imuCubeWidth);
     
     glPopMatrix();
 }
@@ -287,7 +308,7 @@ void UKF::initializeStateAndCovariance()
     clear(state);
     //state.segment(0, 3) = simCamera.getImuPosition();
     state.segment(0, 3) = simCamera.getImuPosition();
-    state[2] = state[2] - 8.0;  // A translation so both devices are visible at start
+    //state[2] = state[2] - 8.0;  // A translation so both devices are visible at start
     state.segment(3, 3) = simCamera.getVelocity();
     Eigen::Quaterniond imuDir = simCamera.getImuDirection();
     state[6] = imuDir.w();
@@ -904,6 +925,11 @@ void UKF::measurementUpdate(Measurement m)
         newLandmarks.print("New Landmarks");
         addNewLandmarks(newLandmarks, stateVector, stateCovariance);
     }
+    
+    if(filterStepCount % stepsBetweenNewFeatures == 0)
+    {
+        removeNegativeLandmarks();
+    }
 }
 
 Eigen::Vector3d UKF::getEuclideanLandmark(int index)
@@ -922,6 +948,26 @@ Eigen::Vector3d UKF::getEuclideanLandmark(int index)
     phi     = stateVector[i+4];
     direction = getDirectionFromAngles(theta, phi);
     inverseDepth = stateVector[i+5];
+
+    Eigen::Vector3d euclideanLandmark = origin + ((1.0/inverseDepth) * direction);
+    
+    return euclideanLandmark;
+}
+
+Eigen::Vector3d UKF::getEuclideanLandmark(Eigen::VectorXd idParam)
+{    
+    Eigen::Vector3d origin;
+    Eigen::Vector3d direction;
+    double inverseDepth;
+    
+    origin[0] = idParam[0];
+    origin[1] = idParam[1];
+    origin[2] = idParam[2];
+    double theta, phi;
+    theta = idParam[3];
+    phi     = idParam[4];
+    direction = getDirectionFromAngles(theta, phi);
+    inverseDepth = idParam[5];
 
     Eigen::Vector3d euclideanLandmark = origin + ((1.0/inverseDepth) * direction);
     
@@ -1136,7 +1182,6 @@ void UKF::addNewLandmarks(Measurement m, Eigen::VectorXd& state, Eigen::MatrixXd
 {
     if (filterStepCount % stepsBetweenNewFeatures == 0)
     {
-        removeNegativeLandmarks();
         int initialNumLandmarks = (state.rows() - deviceStateSize) / landmarkSize;
 
         Eigen::Vector3d position;

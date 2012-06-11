@@ -105,6 +105,7 @@ inline double randomDouble(float min, double max)
 
 static const double PI = 3.1415926535897932384626433832795028841971693993751058;
 static const double cubeWidth = 4.0;
+static const double imuCubeWidth = 4.0;
 static const double axesCubeWidth = 2.0;
 
 void drawCamera(Eigen::Vector3d pos, Eigen::Quaterniond dir, double focalLength, double r, double g, double b);

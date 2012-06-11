@@ -7,15 +7,15 @@ Device::Device(){}
 Device::Device(SimScene simScene)
 {    
     measurementNoiseMean << 0.0, 0.0, 0.0;
-    measurementNoiseVariance << 0.01, 0.01, 0.0001;
+    measurementNoiseVariance << 0.3, 0.3, 0.3;
     
     accelerationNoiseMean << 0.0, 0.0, 0.0;
     //accelerationNoiseMean << 0.5, 0.5, 0.5;
-    accelerationNoiseVariance << 0.01, 0.01, 0.01;
+    accelerationNoiseVariance << 0.0001, 0.0001, 0.0001;
     
     angVelocityNoiseMean << 0.0, 0.0, 0.0;
     //angVelocityNoiseMean << 0.5, 0.5, 0.5;
-    angVelocityNoiseVariance << 0.01, 0.01, 0.01;
+    angVelocityNoiseVariance << 0.0001, 0.0001, 0.0001;
     
     //Eigen::AngleAxisd aa(pi / 2.0, Eigen::Vector3d::UnitY());
     Eigen::AngleAxisd aa(0.0, Eigen::Vector3d::UnitY());
@@ -109,10 +109,9 @@ void Device::timeStep()
 
  Eigen::VectorXd Device::control()
  {
-     //Eigen::Vector3d acceleration = getAcceleration();
      Eigen::Vector3d acceleration = getAccelerationDev();
      addNoise(acceleration, accelerationNoiseMean, accelerationNoiseVariance);
-     //Eigen::Vector3d angVelocity = getAngularVelocity();
+     
      Eigen::Vector3d angVelocity = getAngularVelocityDev();
      addNoise(angVelocity, angVelocityNoiseMean, angVelocityNoiseVariance);
      
@@ -170,7 +169,6 @@ Eigen::Vector3d Device::getImuPosition()
 
     Eigen::Vector3d position;
     position << 0.0, std::sin(currTime) * sizeScale,  std::cos(currTime) * sizeScale;
-    //position << std::sin(currTime * 1.0) * sizeScale / 2.0, std::sin(currTime) * sizeScale,  std::cos(currTime) * sizeScale;
     
     return position;
 }
@@ -195,15 +193,13 @@ Eigen::Vector3d Device::getVelocity()
 {
     Eigen::Vector3d velocity;
     velocity << 0.0, std::cos(currTime) * sizeScale, -1.0 * std::sin(currTime) * sizeScale;
-    //velocity << std::cos(currTime * 1.0) * sizeScale / 2.0, std::cos(currTime) * sizeScale, -1.0 * std::sin(currTime) * sizeScale;
     return velocity;
 }
 
 Eigen::Vector3d Device::getAcceleration()
 {
     Eigen::Vector3d acceleration;
-    acceleration << 0.0, -1.0 * std::sin(currTime) * sizeScale, -1.0 * std::cos(currTime) * sizeScale;    
-    //acceleration << -1.0 * std::sin(currTime * 1.0) * sizeScale / 2.0, -1.0 * std::sin(currTime) * sizeScale, -1.0 * std::cos(currTime) * sizeScale;
+    acceleration << 0.0, -1.0 * std::sin(currTime) * sizeScale, -1.0 * std::cos(currTime) * sizeScale;
     return acceleration;
 }
 
@@ -283,7 +279,7 @@ void Device::draw()
         glRotated(aa.angle() * 180.0 / pi, aa.axis().x(), aa.axis().y(), aa.axis().z());
 
         Color::setColor(0.8, 0.0, 0.0); //red
-        glutSolidCube(cubeWidth); // IMU
+        glutSolidCube(imuCubeWidth); // IMU
         
         // Axes
 //        glBegin(GL_LINES);
